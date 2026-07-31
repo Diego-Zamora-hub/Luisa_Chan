@@ -1,6 +1,8 @@
 import { Chatbot } from './bot.js';
 
 const bot = new Chatbot();
+const introScreen = document.querySelector('#introScreen');
+const introStart = document.querySelector('#introStart');
 const conversation = document.querySelector('#conversation');
 const form = document.querySelector('#chatForm');
 const input = document.querySelector('#messageInput');
@@ -29,6 +31,11 @@ const STORAGE_KEYS = { avatar: 'chantreapp-avatar', wallpaper: 'chantreapp-wallp
 // (o cambia esta ruta) y se mostrará automáticamente mientras el usuario no suba una propia.
 const DEFAULT_AVATAR = 'assets/foto_perfil_predeterminada.jpeg';
 const DOUBLE_TICK_SVG = '<svg viewBox="0 0 18 12" aria-hidden="true"><path d="M1 6.5 4.5 10 11 2" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 6.5 10 10 16.5 2" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+introStart.addEventListener('click', () => {
+  introScreen.classList.add('is-leaving');
+  window.setTimeout(() => { introScreen.hidden = true; input.focus(); }, 620);
+}, { once: true });
 
 function now() { return new Intl.DateTimeFormat('es-CO', { hour: '2-digit', minute: '2-digit' }).format(new Date()); }
 function scrollToEnd() { conversation.scrollTop = conversation.scrollHeight; }

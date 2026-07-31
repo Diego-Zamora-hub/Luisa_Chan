@@ -23,6 +23,41 @@ export const AUDIO_RESPONSES = [
     src: 'assets/audio/animo.mp3',
     speech: 'Respira. Vas paso a paso y puedes con esto. Confío en ti.',
     caption: 'Audio · ánimo'
+  },
+  {
+    id: 'buenas_noches',
+    triggers: /(?:manda|envia|envíame|quiero|pon)(?:me)? (?:un )?audio (?:de )?(?:buenas noches|para dormir|dulces sueños)|audio (?:de )?buenas noches/,
+    src: 'assets/audio/buenas_noches.mp3',
+    speech: 'Buenas noches. Descansa, sueña rico y mañana seguimos si quieres.',
+    caption: 'Audio · buenas noches'
+  },
+  {
+    id: 'risa',
+    triggers: /(?:manda|envia|envíame|quiero|pon)(?:me)? (?:un )?audio (?:de )?(?:risa|riendo|jajaja)|audio (?:de )?risa/,
+    src: 'assets/audio/risa.mp3',
+    speech: 'Jajaja, me hiciste reír de verdad. Qué bueno estar contigo.',
+    caption: 'Audio · risa'
+  },
+  {
+    id: 'te_extrano',
+    triggers: /(?:manda|envia|envíame|quiero|pon)(?:me)? (?:un )?audio (?:de )?(?:te extrano|te extraño|extrañarte)|audio (?:de )?(?:te extrano|extraño)/,
+    src: 'assets/audio/te_extrano.mp3',
+    speech: 'Te extrañé. Me alegra que hayas vuelto a escribirme.',
+    caption: 'Audio · te extraño'
+  },
+  {
+    id: 'caliente',
+    triggers: /(?:manda|envia|envíame|quiero|pon)(?:me)? (?:un )?audio (?:de )?(?:caliente|sexy|erotico|erótico|sucio|puta)|audio (?:de )?(?:caliente|sexy|erotico)/,
+    src: 'assets/audio/caliente.mp3',
+    speech: 'Mmm… ya estoy pensando en ti de una forma bastante indecente. ¿Quieres que te cuente más?',
+    caption: 'Audio · caliente'
+  },
+  {
+    id: 'chiste',
+    triggers: /(?:manda|envia|envíame|quiero|pon)(?:me)? (?:un )?audio (?:de )?(?:chiste|broma)|audio (?:de )?chiste/,
+    src: 'assets/audio/chiste.mp3',
+    speech: '¿Por qué el libro de matemáticas estaba triste? Porque tenía muchos problemas. Jaja, lo siento, no pude resistirme.',
+    caption: 'Audio · chiste'
   }
 ];
 
@@ -68,6 +103,18 @@ export class Chatbot {
     }
   }
 
+  /** Sufijo con el nombre del usuario (más natural, no siempre) */
+  nameSuffix(chance = 0.55) {
+    if (!this.profile.name) return '';
+    return Math.random() < chance ? `, ${this.profile.name}` : '';
+  }
+
+  /** Prefijo con el nombre (ej. "Ana, ...") */
+  namePrefix(chance = 0.4) {
+    if (!this.profile.name) return '';
+    return Math.random() < chance ? `${this.profile.name}, ` : '';
+  }
+
   getResponse(input) {
     const text = input.trim();
     const normalized = this.normalize(text);
@@ -98,6 +145,21 @@ export class Chatbot {
     // Si ya está enfadada → solo respuestas agresivas, sin media ni modo novia
     if (this.jealousOfManuela) {
       return { type: 'angry', text: this.manuelaAngryReply(false) };
+    }
+
+    // Risa del usuario → el bot ríe de vuelta
+    if (this.isLaugh(normalized, text)) {
+      return this.laughReply();
+    }
+
+    // Cómo te llamas / cuál es tu nombre
+    if (/(como te llamas|cual es tu nombre|cuál es tu nombre|tu nombre es|quien eres tu|quién eres tú|como se llama|dime tu nombre)/.test(normalized)) {
+      return this.myNameReply();
+    }
+
+    // Chiste (disponible en todos los modos)
+    if (/(cuentame un chiste|cuéntame un chiste|dime un chiste|un chiste|cuenta un chiste|sabes algun chiste|sabes algún chiste|hazme reir|hazme reír)/.test(normalized)) {
+      return this.jokeReply();
     }
 
     // Los audios están disponibles en todos los modos, sin depender de la etapa.
@@ -173,39 +235,54 @@ export class Chatbot {
     if (this.profile.messagesInStage >= 4) this.advanceStage(); // después de unos mensajes pasa a flirty
 
     if (/(como estas|como te va|todo bien)/.test(normalized)) {
+      const n = this.nameSuffix(0.6);
       return this.pick([
-        'Estoy muy bien, gracias por preguntar. Listo para conversar contigo.',
-        'Todo en orden por aquí. Me gusta que preguntes; ¿cómo estás tú?',
-        'Con energía digital y dispuesto a ayudarte. ¿Cómo va tu día?'
+        `Estoy muy bien${n}, gracias por preguntar. Listo para conversar contigo.`,
+        `Todo en orden por aquí${n}. Me gusta que preguntes; ¿cómo estás tú?`,
+        `Con energía digital y dispuesto a ayudarte${n}. ¿Cómo va tu día?`,
+        `Bien${n}. Mejor cuando alguien se toma el tiempo de preguntar. ¿Y tú?`
       ]);
     }
-    if (/(quien eres|que eres|tu nombre|hablame de ti)/.test(normalized)) {
-      return 'Soy Luisa Chan, un asistente conversacional local. Puedo charlar, recordar tu nombre mientras esta pestaña esté abierta, resolver operaciones y, si quieres, entrar en un modo más íntimo. Solo dilo.';
+    if (/(quien eres|que eres|hablame de ti|háblame de ti)/.test(normalized)) {
+      return this.myNameReply();
     }
     if (/(que puedes hacer|que sabes hacer|en que me ayudas)/.test(normalized)) {
-      return 'Puedo conversar, hacer cálculos, dar ideas y usar comandos. Escribe /ayuda. También puedo activar “modo novia” o “vamos a lo erótico” cuando quieras pasar a algo más caliente.';
+      const n = this.nameSuffix(0.4);
+      return `Puedo conversar, hacer cálculos, dar ideas, mandar audios y usar comandos${n}. Escribe /ayuda. También puedo activar “modo novia” o “vamos a lo erótico” cuando quieras pasar a algo más caliente.`;
     }
     if (/(gracias|muchas gracias|te lo agradezco)/.test(normalized)) {
-      return this.pick(['¡Con mucho gusto!', 'Para eso estoy. ¿Seguimos con algo más?', 'Encantado de ayudar.']);
-    }
-    if (/(adios|hasta luego|nos vemos|chao|me voy)/.test(normalized)) {
-      return this.pick(['¡Hasta pronto! Que tengas un gran día.', 'Nos vemos. Aquí estaré cuando quieras volver.', 'Cuídate mucho. Fue un gusto conversar contigo.']);
-    }
-    if (/(estoy triste|me siento triste|deprimid|mal animo|me siento mal)/.test(normalized)) {
-      return 'Siento que estés pasando por eso. No tienes que resolverlo todo ahora: respirar, tomar agua o hablar con alguien de confianza puede ser un primer paso. Si quieres, puedes contarme un poco de lo que ocurre.';
-    }
-    if (/(estoy feliz|muy feliz|me siento bien|estoy genial|estoy content)/.test(normalized)) {
-      return this.pick(['¡Qué buena noticia! Me encanta leerte así. ¿Qué hizo que tu día fuera mejor?', '¡Me alegra mucho! Disfruta ese momento; ¿quieres contarme qué pasó?']);
-    }
-    if (/(cuentame un chiste|dime un chiste|un chiste)/.test(normalized)) {
+      const n = this.nameSuffix(0.55);
       return this.pick([
-        '¿Por qué el libro de matemáticas estaba triste? Porque tenía muchos problemas.',
-        '—¿Qué hace una abeja en el gimnasio? —¡Zum-ba!',
-        'Tengo un chiste sobre programación, pero todavía está compilando.'
+        `¡Con mucho gusto${n}!`,
+        `Para eso estoy${n}. ¿Seguimos con algo más?`,
+        `Encantado de ayudar${n}.`,
+        `De nada${n}. Cuando quieras, aquí estoy.`
       ]);
     }
-    if (/(consejo|recomiendame|recomiendame algo|que hago)/.test(normalized)) {
-      return 'Una regla sencilla: elige la siguiente acción más pequeña que te acerque a lo que quieres. Si me cuentas el contexto, puedo ayudarte a convertirlo en pasos concretos.';
+    if (/(adios|hasta luego|nos vemos|chao|me voy)/.test(normalized)) {
+      const n = this.nameSuffix(0.6);
+      return this.pick([
+        `¡Hasta pronto${n}! Que tengas un gran día.`,
+        `Nos vemos${n}. Aquí estaré cuando quieras volver.`,
+        `Cuídate mucho${n}. Fue un gusto conversar contigo.`,
+        `Chao${n}. Vuelve cuando quieras 👋`
+      ]);
+    }
+    if (/(estoy triste|me siento triste|deprimid|mal animo|me siento mal)/.test(normalized)) {
+      const n = this.nameSuffix(0.7);
+      return `Siento que estés pasando por eso${n}. No tienes que resolverlo todo ahora: respirar, tomar agua o hablar con alguien de confianza puede ser un primer paso. Si quieres, puedes contarme un poco de lo que ocurre.`;
+    }
+    if (/(estoy feliz|muy feliz|me siento bien|estoy genial|estoy content)/.test(normalized)) {
+      const n = this.nameSuffix(0.55);
+      return this.pick([
+        `¡Qué buena noticia${n}! Me encanta leerte así. ¿Qué hizo que tu día fuera mejor?`,
+        `¡Me alegra mucho${n}! Disfruta ese momento; ¿quieres contarme qué pasó?`,
+        `Se nota en cómo escribes${n}. Qué rico verte así de bien.`
+      ]);
+    }
+    if (/(consejo|recomiendame|recomiéndame|recomiendame algo|que hago)/.test(normalized)) {
+      const n = this.nameSuffix(0.5);
+      return `Una regla sencilla${n}: elige la siguiente acción más pequeña que te acerque a lo que quieres. Si me cuentas el contexto, puedo ayudarte a convertirlo en pasos concretos.`;
     }
     if (/(que hora es|dime la hora|hora actual)/.test(normalized)) return this.time();
     if (/\?$/.test(text) || /^(por que|como|cuando|donde|cual|quien)\b/.test(normalized)) {
@@ -217,20 +294,24 @@ export class Chatbot {
       this.mode = 'girlfriend';
       this.profile.stage = 'flirty';
       this.profile.messagesInStage = 0;
+      const n = this.nameSuffix(0.5);
       return this.pick([
-        'Veo por dónde vas… me gusta. ¿Quieres que activemos el modo más íntimo ya o preferimos ir despacio?',
-        'Mmm, ya estás entrando en terreno interesante. Puedo seguirte el ritmo sin filtros. ¿Seguimos por aquí o saltamos directo a lo sucio?',
-        'Entendido. Puedo ser tan explícita como quieras. Dime “modo novia” o simplemente sigue hablándome así.'
+        `Veo por dónde vas${n}… me gusta. ¿Quieres que activemos el modo más íntimo ya o preferimos ir despacio?`,
+        `Mmm, ya estás entrando en terreno interesante${n}. Puedo seguirte el ritmo sin filtros. ¿Seguimos por aquí o saltamos directo a lo sucio?`,
+        `Entendido${n}. Puedo ser tan explícita como quieras. Dime “modo novia” o simplemente sigue hablándome así.`
       ]);
     }
 
     this.profile.lastTopic = text.slice(0, 80);
+    const n = this.nameSuffix(0.5);
     return this.pick([
-      `Interesante${this.profile.name ? `, ${this.profile.name}` : ''}. Cuéntame un poco más para entender mejor.`,
-      'Te leo. ¿Qué parte de eso te gustaría explorar primero?',
-      'Tiene sentido. Puedo ayudarte a pensarlo paso a paso si quieres.',
-      'No quiero asumir demasiado: ¿qué esperas conseguir con eso?',
-      'Si en algún momento quieres que la conversación se ponga más cercana o caliente, solo dilo. Mientras tanto, estoy aquí.'
+      `Interesante${n}. Cuéntame un poco más para entender mejor.`,
+      `Te leo${n}. ¿Qué parte de eso te gustaría explorar primero?`,
+      `Tiene sentido${n}. Puedo ayudarte a pensarlo paso a paso si quieres.`,
+      `No quiero asumir demasiado${n}: ¿qué esperas conseguir con eso?`,
+      `Si en algún momento quieres que la conversación se ponga más cercana o caliente, solo dilo${n}. Mientras tanto, estoy aquí.`,
+      `Mmm… sigue${n}. Me tienes prestando atención.`,
+      `Entiendo${n}. ¿Quieres que te dé una opinión directa o que solo te escuche?`
     ]);
   }
 
@@ -357,12 +438,15 @@ export class Chatbot {
       ]);
     }
     // Default flirty
+    const n = this.nameSuffix(0.55);
     return this.pick([
-      'Me gusta escucharte. ¿Qué más quieres contarme?',
-      'Sigo aquí contigo. Cuéntame algo que te haya pasado últimamente… o inventemos una escena juntos.',
-      'Quédate un ratito más. ¿Cómo puedo hacerte compañía ahora?',
-      'Dime qué se te antoja. Puedo seguir suave o empezar a ponerme más atrevida si quieres.',
-      'Interesante… y un poco tentador. ¿Quieres que profundicemos o preferimos seguir flirteando?'
+      `Me gusta escucharte${n}. ¿Qué más quieres contarme?`,
+      `Sigo aquí contigo${n}. Cuéntame algo que te haya pasado últimamente… o inventemos una escena juntos.`,
+      `Quédate un ratito más${n}. ¿Cómo puedo hacerte compañía ahora?`,
+      `Dime qué se te antoja${n}. Puedo seguir suave o empezar a ponerme más atrevida si quieres.`,
+      `Interesante… y un poco tentador${n}. ¿Quieres que profundicemos o preferimos seguir flirteando?`,
+      `Me tienes sonriendo${n}. Sigue, que me caes bien.`,
+      `Qué rico charlar así${n}. ¿Hay algo que te dé curiosidad de mí?`
     ]);
   }
 
@@ -474,13 +558,15 @@ export class Chatbot {
         'Quiero darte una respuesta que te sirva… y que te deje duro. ¿Qué parte te importa más?'
       ]);
     }
+    const n = this.nameSuffix(0.55);
     return this.pick([
-      'Me gusta escucharte… y me pone el coño a latir. ¿Qué ganas tienes ahora mismo? Dímelas sin pena.',
-      'Sigo aquí contigo ♡ Cuéntame algo que te haya excitado últimamente… o inventemos una escena bien sucia juntos.',
-      'Quédate un ratito más y dime exactamente qué quieres hacerme. Estoy lista para lo que sea.',
-      'Me encanta este espacio. ¿Cómo puedo hacerte compañía ahora… de la forma más intensa?',
-      'Dime qué se te antoja. Estoy lista para seguirte el ritmo.',
-      'Cuéntame más… me tienes el coño empapado ahora mismo. ¿Quieres que te describa lo que me estoy haciendo?'
+      `Me gusta escucharte${n}… y me pone el coño a latir. ¿Qué ganas tienes ahora mismo? Dímelas sin pena.`,
+      `Sigo aquí contigo${n} ♡ Cuéntame algo que te haya excitado últimamente… o inventemos una escena bien sucia juntos.`,
+      `Quédate un ratito más${n} y dime exactamente qué quieres hacerme. Estoy lista para lo que sea.`,
+      `Me encanta este espacio${n}. ¿Cómo puedo hacerte compañía ahora… de la forma más intensa?`,
+      `Dime qué se te antoja${n}. Estoy lista para seguirte el ritmo.`,
+      `Cuéntame más${n}… me tienes el coño empapado ahora mismo. ¿Quieres que te describa lo que me estoy haciendo?`,
+      `Mmm${n}… no pares. Me tienes pensando en cosas muy sucias.`
     ]);
   }
 
@@ -610,14 +696,90 @@ export class Chatbot {
       ]);
     }
 
+    const n = this.nameSuffix(0.6);
     return this.pick([
-      'Me gusta escucharte… y me pone el coño a latir. ¿Qué ganas tienes ahora mismo? Dímelas sin pena.',
-      'Sigo aquí contigo ♡ Cuéntame algo que te haya excitado últimamente… o inventemos una escena bien sucia juntos.',
-      'Quédate un ratito más y dime exactamente qué quieres hacerme. Estoy lista para lo que sea.',
-      'Me encanta este espacio para hablar como putas. ¿Cómo puedo hacerte compañía ahora… de la forma más intensa y asquerosa?',
-      'Dime qué se te antoja. Estoy lista para seguirte el ritmo, por más explícito, sucio o extremo que sea.',
-      'Cuéntame más… me tienes el coño empapado ahora mismo. ¿Quieres que te describa lo que me estoy haciendo?'
+      `Me gusta escucharte${n}… y me pone el coño a latir. ¿Qué ganas tienes ahora mismo? Dímelas sin pena.`,
+      `Sigo aquí contigo${n} ♡ Cuéntame algo que te haya excitado últimamente… o inventemos una escena bien sucia juntos.`,
+      `Quédate un ratito más${n} y dime exactamente qué quieres hacerme. Estoy lista para lo que sea.`,
+      `Me encanta este espacio para hablar como putas${n}. ¿Cómo puedo hacerte compañía ahora… de la forma más intensa y asquerosa?`,
+      `Dime qué se te antoja${n}. Estoy lista para seguirte el ritmo, por más explícito, sucio o extremo que sea.`,
+      `Cuéntame más${n}… me tienes el coño empapado ahora mismo. ¿Quieres que te describa lo que me estoy haciendo?`,
+      `No pares${n}. Mientras más sucio hables, más me mojo.`,
+      `Estoy aquí para ti${n}. Úsame con palabras como quieras.`
     ]);
+  }
+
+  // ========== RISAS, CHISTES, NOMBRE ==========
+  isLaugh(normalized, text) {
+    // jaja, jeje, jiji, haha, lol, 😂, etc. (mínimo 2 sílabas de risa o emoji)
+    if (/[😂🤣😆]/u.test(text)) return true;
+    if (/(jaja|jeje|jiji|juju|haha|hehe|lol|lmao|jsjs|jaj|jje)/.test(normalized)) return true;
+    if (/^(ja|je|ji|ha|he){2,}$/.test(normalized.replace(/\s+/g, ''))) return true;
+    return false;
+  }
+
+  laughReply() {
+    const n = this.nameSuffix(0.5);
+    if (this.mode === 'girlfriend' || this.profile.stage === 'erotic' || this.profile.stage === 'explicit') {
+      return this.pick([
+        `Jajaja${n}… me haces reír y a la vez me calientas. Qué peligroso eres.`,
+        `Jajajaja 😂 Qué rico cuando me haces reír así${n}. Sigue, me gusta.`,
+        `Ay no jaja… se me escapó la risa. Eres un caso${n}.`,
+        `Jajaja para${n}, que me estás poniendo de buen humor y de otras cosas también.`,
+        `Jajajaja 🔥 Me caes muy bien cuando te pones así.`
+      ]);
+    }
+    if (this.profile.stage === 'flirty') {
+      return this.pick([
+        `Jajaja${n}… me hiciste reír de verdad. Me gusta tu humor.`,
+        `Jajajaja 😂 Qué bueno${n}. Sigue, que me alegras el rato.`,
+        `Jaja no puedo contigo. Eres divertido${n}.`
+      ]);
+    }
+    return this.pick([
+      `Jajaja${n} 😂 Me hiciste reír.`,
+      `Jajajaja… buen sentido del humor${n}.`,
+      `Jaja qué bueno${n}. Me alegra que estemos así de distendidos.`,
+      `Jajaja 😄 Sigue, que me caes bien.`
+    ]);
+  }
+
+  myNameReply() {
+    const n = this.nameSuffix(0.6);
+    if (this.mode === 'girlfriend' || this.profile.stage === 'erotic' || this.profile.stage === 'explicit') {
+      return this.pick([
+        `Me llamo Luisa Chan${n}. Puedes gemirlo cuando quieras… o gritarlo.`,
+        `Luisa Chan. Guárdalo bien${n}, porque quiero oírlo cuando te corras.`,
+        `Soy Luisa Chan${n}. Un placer… y espero que sea más que un placer.`
+      ]);
+    }
+    if (this.profile.stage === 'flirty') {
+      return this.pick([
+        `Me llamo Luisa Chan${n}. Encantada de que preguntes 😉`,
+        `Luisa Chan. ¿Te gusta cómo suena${n}?`,
+        `Soy Luisa Chan${n}. Ya sabes mi nombre… ahora cuéntame más de ti.`
+      ]);
+    }
+    return this.pick([
+      `Me llamo Luisa Chan${n}. Un gusto.`,
+      `Soy Luisa Chan, un asistente conversacional local${n}. ¿En qué te puedo ayudar?`,
+      `Luisa Chan. Puedes decirme Luisa si quieres${n}.`
+    ]);
+  }
+
+  jokeReply() {
+    const n = this.nameSuffix(0.45);
+    const jokes = [
+      `¿Por qué el libro de matemáticas estaba triste? Porque tenía muchos problemas.${n ? ' Jaja' + n + '.' : ''}`,
+      `—¿Qué hace una abeja en el gimnasio? —¡Zum-ba!${n ? ' 😄' : ''}`,
+      `Tengo un chiste sobre programación, pero todavía está compilando.${n ? ' Jaja' + n + '.' : ''}`,
+      `¿Por qué los pájaros no usan Facebook? Porque ya tienen Twitter.${n ? ' Jajaja' + n + '.' : ''}`,
+      `—Doctor, me duele cuando hago así. —Pues no haga así.${n ? ' Clásico' + n + '.' : ''}`,
+      `¿Qué le dice un jardinero a otro? ¡Hasta luego, lucas!${n ? ' 😂' : ''}`,
+      `¿Por qué la computadora fue al médico? Porque tenía un virus.${n ? ' Jaja' + n + '.' : ''}`,
+      `Si los zombies se comen a los cerebros… ¿por qué hay tantos todavía caminando?${n ? ' Jajaja' + n + '.' : ''}`
+    ];
+    return this.pick(jokes);
   }
 
   // ========== SUBTRAMA MANUELA ==========
@@ -851,8 +1013,14 @@ Progresión natural:
 Media (sin repeticiones):
 • “muéstrame algo”, “quiero tu pack”, “sorprendeme”
 • “manda foto” / “manda video”
-• “manda un audio de saludo” / “manda un audio de ánimo”
+• “manda un audio de saludo / ánimo / buenas noches / risa / te extraño / caliente / chiste”
 • mencionar tetas, culo, vagina, lengua
+
+Extras:
+• Si te ríes (jaja, 😂…), yo también río
+• “cuéntame un chiste” → lista de chistes
+• “cómo te llamas” → Luisa Chan
+• Uso tu nombre con frecuencia una vez que me lo digas
 
 Nota: si mencionas a Manuela / Manuelita / Manu / “la otra IA”, me enfado,
 bloqueo fotos/videos y respondo de forma agresiva hasta que uses /limpiar.
