@@ -10,15 +10,35 @@ const imageInput = document.querySelector('#imageInput');
 const attachButton = document.querySelector('#attachButton');
 const emojiButton = document.querySelector('#emojiButton');
 const emojiPicker = document.querySelector('#emojiPicker');
+const avatarButton = document.querySelector('#avatarButton');
+const avatarInput = document.querySelector('#avatarInput');
+const avatarImage = document.querySelector('#avatarImage');
+const avatarFallback = document.querySelector('#avatarFallback');
+const wallpaperButton = document.querySelector('#wallpaperButton');
+const wallpaperPanel = document.querySelector('#wallpaperPanel');
+const wallpaperClose = document.querySelector('#wallpaperClose');
+const wallpaperInput = document.querySelector('#wallpaperInput');
 let isReplying = false;
+
+const STORAGE_KEYS = { avatar: 'chantreapp-avatar', wallpaper: 'chantreapp-wallpaper', wallpaperImage: 'chantreapp-wallpaper-image' };
+const DOUBLE_TICK_SVG = '<svg viewBox="0 0 18 12" aria-hidden="true"><path d="M1 6.5 4.5 10 11 2" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 6.5 10 10 16.5 2" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 function now() { return new Intl.DateTimeFormat('es-CO', { hour: '2-digit', minute: '2-digit' }).format(new Date()); }
 function scrollToEnd() { conversation.scrollTop = conversation.scrollHeight; }
+function appendTime(bubble, sender) {
+  const time = document.createElement('span'); time.className = 'message-time';
+  const stamp = document.createElement('span'); stamp.textContent = now(); time.append(stamp);
+  if (sender === 'user') {
+    const ticks = document.createElement('span'); ticks.className = 'message-ticks'; ticks.innerHTML = DOUBLE_TICK_SVG;
+    time.append(ticks);
+  }
+  bubble.append(time);
+}
 function addMessage(text, sender) {
   const row = document.createElement('div'); row.className = `message-row ${sender}`;
   const bubble = document.createElement('div'); bubble.className = 'bubble';
   bubble.append(document.createTextNode(text));
-  const time = document.createElement('span'); time.className = 'message-time'; time.textContent = now(); bubble.append(time);
+  appendTime(bubble, sender);
   row.append(bubble); conversation.append(row); scrollToEnd();
 }
 function addImageMessage(src, sender, caption = '') {
@@ -33,7 +53,7 @@ function addImageMessage(src, sender, caption = '') {
   }, { once: true });
   bubble.append(image);
   if (caption) { const label = document.createElement('span'); label.className = 'image-caption'; label.textContent = caption; bubble.append(label); }
-  const time = document.createElement('span'); time.className = 'message-time'; time.textContent = now(); bubble.append(time);
+  appendTime(bubble, sender);
   row.append(bubble); conversation.append(row); scrollToEnd();
 }
 function addVideoMessage(src, sender, caption = '') {
@@ -43,7 +63,7 @@ function addVideoMessage(src, sender, caption = '') {
   const showPlaceholder = () => { video.remove(); const placeholder = document.createElement('div'); placeholder.className = 'image-placeholder'; placeholder.textContent = `Video pendiente: reemplaza ${src.split('/').pop()} en la carpeta assets.`; bubble.prepend(placeholder); };
   video.addEventListener('error', showPlaceholder, { once: true }); bubble.append(video);
   if (caption) { const label = document.createElement('span'); label.className = 'image-caption'; label.textContent = caption; bubble.append(label); }
-  const time = document.createElement('span'); time.className = 'message-time'; time.textContent = now(); bubble.append(time);
+  appendTime(bubble, sender);
   row.append(bubble); conversation.append(row); scrollToEnd();
 }
 function showTyping() { const item = document.createElement('div'); item.className = 'typing'; item.id = 'typing'; item.innerHTML = '<span>Escribiendo</span><span class="typing-dots"><i></i><i></i><i></i></span>'; conversation.append(item); scrollToEnd(); }
@@ -90,4 +110,59 @@ modeButton.addEventListener('click', () => {
   );
 });
 document.querySelectorAll('[data-message]').forEach(button => button.addEventListener('click', () => sendMessage(button.dataset.message)));
+
+// --- Foto de perfil personalizada ---
+function applyAvatar(dataUrl) {
+  if (dataUrl) { avatarImage.src = dataUrl; avatarImage.hidden = false; avatarFallback.hidden = true; }
+  else { avatarImage.hidden = true; avatarImage.removeAttribute('src'); avatarFallback.hidden = false; }
+}
+avatarButton.addEventListener('click', () => avatarInput.click());
+avatarInput.addEventListener('change', () => {
+  const file = avatarInput.files?.[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => { const dataUrl = reader.result; applyAvatar(dataUrl); try { localStorage.setItem(STORAGE_KEYS.avatar, dataUrl); } catch { /* almacenamiento lleno o no disponible */ } };
+  reader.readAsDataURL(file);
+  avatarInput.value = '';
+});
+try { const savedAvatar = localStorage.getItem(STORAGE_KEYS.avatar); if (savedAvatar) applyAvatar(savedAvatar); } catch { /* sin acceso a localStorage */ }
+
+// --- Fondo de chat personalizable (estilo WhatsApp) ---
+const WALLPAPER_CLASSES = ['wallpaper-default', 'wallpaper-plain', 'wallpaper-grid', 'wallpaper-lines', 'wallpaper-waves', 'wallpaper-hearts', 'wallpaper-custom'];
+function applyWallpaper(name, customImage) {
+  conversation.classList.remove(...WALLPAPER_CLASSES);
+  conversation.style.backgroundImage = '';
+  if (name === 'custom' && customImage) { conversation.classList.add('wallpaper-custom'); conversation.style.backgroundImage = `url(${customImage})`; }
+  else { conversation.classList.add(`wallpaper-${name}`); }
+  document.querySelectorAll('.wallpaper-swatch').forEach(swatch => swatch.classList.toggle('active', swatch.dataset.wallpaper === name));
+}
+function saveWallpaper(name, customImage) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.wallpaper, name);
+    if (customImage) localStorage.setItem(STORAGE_KEYS.wallpaperImage, customImage);
+    else localStorage.removeItem(STORAGE_KEYS.wallpaperImage);
+  } catch { /* almacenamiento lleno o no disponible */ }
+}
+wallpaperButton.addEventListener('click', () => { wallpaperPanel.hidden = !wallpaperPanel.hidden; });
+wallpaperClose.addEventListener('click', () => { wallpaperPanel.hidden = true; });
+document.querySelectorAll('.wallpaper-swatch').forEach(swatch => swatch.addEventListener('click', () => {
+  const name = swatch.dataset.wallpaper; applyWallpaper(name); saveWallpaper(name); wallpaperPanel.hidden = true;
+}));
+wallpaperInput.addEventListener('change', () => {
+  const file = wallpaperInput.files?.[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => { const dataUrl = reader.result; applyWallpaper('custom', dataUrl); saveWallpaper('custom', dataUrl); wallpaperPanel.hidden = true; };
+  reader.readAsDataURL(file);
+  wallpaperInput.value = '';
+});
+document.addEventListener('click', event => {
+  if (wallpaperPanel.hidden) return;
+  if (wallpaperPanel.contains(event.target) || wallpaperButton.contains(event.target)) return;
+  wallpaperPanel.hidden = true;
+});
+(function initWallpaper() {
+  let savedName = 'default', savedImage = null;
+  try { savedName = localStorage.getItem(STORAGE_KEYS.wallpaper) || 'default'; savedImage = localStorage.getItem(STORAGE_KEYS.wallpaperImage); } catch { /* sin acceso a localStorage */ }
+  applyWallpaper(savedName, savedImage);
+})();
+
 clearConversation(); input.focus();
