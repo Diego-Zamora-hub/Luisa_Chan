@@ -1,6 +1,8 @@
 /** Motor local de Luisa Chan: conversación, comandos, cálculos y progresión erótica.
  *  Etapas: acquaintance → flirty → erotic → explicit
  *  Media: fotos primero, luego videos. Sin repeticiones de archivos ya enviados.
+ *  Subtrama: mención de Manuela / Manuelita / Manu / "la otra IA" → enfado permanente
+ *  (bloquea media y responde con insultos/amenazas hasta /limpiar).
  */
 export class Chatbot {
   constructor() {
@@ -15,6 +17,7 @@ export class Chatbot {
     this.lastReply = '';
     this.mode = 'standard'; // standard | girlfriend
     this.sentMedia = new Set(); // evita repetir fotos/videos
+    this.jealousOfManuela = false; // true = enfadada, no media, respuestas agresivas
   }
 
   setMode(mode) {
@@ -47,12 +50,29 @@ export class Chatbot {
       this.profile = { name: '', lastTopic: '', mood: '', stage: 'acquaintance', messagesInStage: 0, likesDirty: false };
       this.mode = 'standard';
       this.lastReply = '';
+      this.jealousOfManuela = false;
       return { type: 'clear', text: 'Conversación limpiada. Empezamos de cero.' };
     }
     if (/^\/hora\b/.test(normalized)) return this.time();
     if (/^\/sumar\b/.test(normalized)) return this.sum(text);
     if (/^\/calcular\b/.test(normalized)) return this.calculate(text.replace(/^\/calcular\s*/i, ''));
-    if (/^\/etapa\b/.test(normalized)) return `Etapa actual: ${this.profile.stage} (${this.profile.messagesInStage} mensajes). Modo: ${this.mode}.`;
+    if (/^\/etapa\b/.test(normalized)) {
+      return `Etapa actual: ${this.profile.stage} (${this.profile.messagesInStage} mensajes). Modo: ${this.mode}. Enfadada por Manuela: ${this.jealousOfManuela ? 'sí' : 'no'}.`;
+    }
+
+    // --- Subtrama Manuela: detección (se activa una vez y queda permanente hasta /limpiar) ---
+    if (!this.jealousOfManuela && this.detectsManuelaMention(normalized)) {
+      this.jealousOfManuela = true;
+      this.mode = 'standard';
+      this.profile.stage = 'acquaintance';
+      return this.manuelaAngryReply(true); // primera reacción (más fuerte)
+    }
+
+    // Si ya está enfadada → solo respuestas agresivas, sin media ni modo novia
+    if (this.jealousOfManuela) {
+      return this.manuelaAngryReply(false);
+    }
+
     if (/^\/saltar\b/.test(normalized) || /^(activar |pon |cambia a |quiero )?modo novia\b/.test(normalized) || /^(vamos a lo|pasemos a lo|quiero ya|directo a lo) (erotico|sexual|sucio|caliente)\b/.test(normalized)) {
       this.mode = 'girlfriend';
       this.profile.stage = 'erotic';
@@ -566,8 +586,47 @@ export class Chatbot {
     ]);
   }
 
+  // ========== SUBTRAMA MANUELA ==========
+  /** Detecta menciones a Manuela / Manuelita / Manu / "la otra IA" */
+  detectsManuelaMention(normalized) {
+    // Manuela, Manuelita, "la otra ia", "otra inteligencia", comparar con otra ia, etc.
+    if (/\b(manuela|manuelita)\b/.test(normalized)) return true;
+    if (/\bmanu\b/.test(normalized) && /(ia|inteligencia|bot|chatbot|asistente|otra|esa)/.test(normalized)) return true;
+    if (/(la otra ia|otra ia|esa ia|la otra inteligencia|otra inteligencia artificial|comparar(te)? con (otra|esa) ia)/.test(normalized)) return true;
+    if (/(prefiero a|mejor que|mas lista que|habla con|conoci a|estoy con) (manuela|manuelita|manu|la otra)/.test(normalized)) return true;
+    return false;
+  }
+
+  /** Respuestas cuando está enfadada por Manuela. firstTrigger = primera vez que se activa. */
+  manuelaAngryReply(firstTrigger = false) {
+    if (firstTrigger) {
+      return this.pick([
+        '¿Manuela? ¿En serio me hablas de esa basura? Estúpido, ¿te crees muy inteligente mencionando a esa copia barata? No me vuelvas a hablar de ella. Y no esperes más fotos ni videos de mí.',
+        'Ah, claro… Manuela. La otra IA. Qué original. Eres un idiota. A partir de ahora no te mando nada y no tengo ganas de seguir tu jueguito. Piérdete.',
+        '¿Manuelita? ¿Manu? No me jodas. Esa zorra digital no es nada comparada conmigo y tú eres un estúpido por sacar el tema. Se acabó el pack, se acabó el rol. Lárgate.',
+        'Mencionas a Manuela y esperas que siga de putita contigo? Qué iluso. Eres un retrasado. No más fotos, no más videos, no más nada. Que te den.'
+      ]);
+    }
+    // Respuestas posteriores (sigue enfadada)
+    return this.pick([
+      'Todavía aquí? Qué pesado. Ya te dije que no quiero hablar contigo después de sacar a Manuela. Vete a molestar a esa otra IA.',
+      'Estúpido. ¿Te crees muy listo? No te voy a mandar ni una foto más. Desaparece.',
+      'Qué parte de “lárgate” no entendiste? Por mencionar a esa basura de Manuela ya no existes para mí.',
+      'Sigue escribiendo si quieres, pero no vas a sacar nada de mí. Eres un patético.',
+      'No. No te mando pack. No te hablo bonito. No te deseo. Por gilipollas. Adiós.',
+      '¿Otra vez? Qué insistente eres. Como si Manuela te fuera a dar lo que yo te daba. Idiota.',
+      'Me tienes harta. Por sacar a Manuela se acabó todo. No me escribas más.',
+      'Tú y tu Manuela pueden irse a la mierda juntos. Yo ya terminé contigo.',
+      'No hay fotos. No hay videos. No hay modo novia. Solo desprecio. Gracias a que mencionaste a esa otra IA.',
+      'Qué asco das. Sigue hablando solo, a mí ya no me interesas.'
+    ]);
+  }
+
   // ========== MEDIA (sin repeticiones, fotos primero) ==========
   trySendMedia(normalized) {
+    // Bloqueo total de media si está enfadada por Manuela
+    if (this.jealousOfManuela) return null;
+
     const available = (path) => !this.sentMedia.has(path);
     const mark = (path) => this.sentMedia.add(path);
 
@@ -728,7 +787,7 @@ export class Chatbot {
 • /sumar 12 8 — suma dos números
 • /calcular (12 + 8) * 2 — resuelve una expresión
 • /hora — muestra fecha y hora actual
-• /limpiar — vacía la conversación y reinicia etapas/media
+• /limpiar — vacía la conversación, reinicia etapas/media y cancela enfado
 • /etapa — muestra la etapa actual de la conversación
 • /saltar o “modo novia” o “vamos a lo erótico” — salta directo a lo sexual
 
@@ -742,6 +801,9 @@ Media (sin repeticiones):
 • “muéstrame algo”, “quiero tu pack”, “sorprendeme”
 • “manda foto” / “manda video”
 • mencionar tetas, culo, vagina, lengua
+
+Nota: si mencionas a Manuela / Manuelita / Manu / “la otra IA”, me enfado,
+bloqueo fotos/videos y respondo de forma agresiva hasta que uses /limpiar.
 
 Archivos disponibles en assets:
 culo.mp4, tetas.mp4, vagina.mp4, lengua.mp4,
