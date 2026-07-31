@@ -176,4 +176,4 @@ document.addEventListener('click', event => {
   applyWallpaper(savedName, savedImage);
 })();
 
-clearConversation(); input.focus();
+clearConversation();

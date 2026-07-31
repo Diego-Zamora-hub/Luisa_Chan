@@ -66,11 +66,7 @@
           <button type="button" data-message="/hora">Ver hora</button>
         </div>
 
-        <form class="composer" id="chatForm" autocomplete="off" data-form-type="other">
-          <!-- Decoy fields: absorb browser/extension password-manager heuristics so they don't
-               offer to save the chat message input as a login credential. Kept off-screen. -->
-          <input class="sr-only" type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" />
-          <input class="sr-only" type="password" name="password" autocomplete="current-password" tabindex="-1" aria-hidden="true" />
+        <form class="composer" id="chatForm" autocomplete="off" novalidate data-form-type="other">
           <input class="sr-only" id="imageInput" type="file" accept="image/*" />
           <button class="composer-icon" id="attachButton" type="button" title="Enviar imagen" aria-label="Enviar imagen">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.4 11.6-8.8 8.8a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>
@@ -80,10 +76,10 @@
           <input
             id="messageInput"
             type="text"
-            name="chat-message-field"
+            name="message"
             placeholder="Escribe un mensaje"
             maxlength="500"
-            autocomplete="one-time-code"
+            autocomplete="off"
             autocorrect="on"
             autocapitalize="sentences"
             spellcheck="true"
