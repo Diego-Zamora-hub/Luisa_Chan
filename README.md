@@ -16,6 +16,18 @@ Abre `index.html` en cualquier navegador moderno. Para desarrollo local también
 - Respuestas con imágenes de contexto para términos como flores, amor o paisaje. Los archivos reemplazables están en `assets/`.
 - Modo Novia con estilo rosa y tono romántico. Se activa con el botón del encabezado o escribiendo `modo novia`.
 - Respuestas con videos `.mp4` de contexto. Los reproductores aparecerán cuando se mencione un video, clip, paisaje, amor o algo alegre.
+- Audios bidireccionales: adjunta `.mp3`, `.m4a`, `.wav`, `.ogg` o `.webm`, y usa el micrófono para dictar texto directamente en el mensaje. El bot puede enviar MP3 configurables o generar una locución desde texto.
+
+## Audios del bot
+
+Hay dos formas de hacer que el bot envíe un audio:
+
+- Escribe `/audio Tu texto aquí` para que use la síntesis de voz del navegador. No requiere archivos.
+- Coloca un MP3 real en `assets/audio/` y configúralo en `AUDIO_RESPONSES` dentro de `js/bot.js`. Cada entrada define los `triggers` (cuándo se manda), `src` (ruta del MP3), `speech` (respaldo si no existe el archivo) y `caption`.
+
+Por defecto puedes crear `assets/audio/saludo.mp3` y `assets/audio/animo.mp3`; después escribe “manda un audio de saludo” o “manda un audio de ánimo”. Si todavía no existen, el chat ofrece el botón para oír el texto configurado con la voz del navegador.
+
+Los audios adjuntos por el usuario se pueden reproducir dentro del chat. El botón de micrófono usa el reconocimiento de voz del navegador para pasar lo que dices directamente al campo de mensaje; funciona en navegadores con Web Speech API (normalmente Chrome y Edge) y requiere permiso de micrófono. La transcripción de archivos ya grabados requeriría conectar un servicio de transcripción o una API de voz.
 
 ## Reemplazar imágenes de ejemplo
 

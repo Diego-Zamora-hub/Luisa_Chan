@@ -4,6 +4,28 @@
  *  Subtrama: mención de Manuela / Manuelita / Manu / "la otra IA" → enfado permanente
  *  (bloquea media y responde con insultos/amenazas hasta /limpiar).
  */
+
+// Configura los audios del bot aquí. Si `src` apunta a un MP3 válido dentro de
+// assets/audio/, se reproducirá ese archivo. Si no existe, se usará `speech`
+// como alternativa con la voz del navegador. Puedes añadir tantas entradas como
+// necesites y cambiar libremente los textos, disparadores y nombres de archivo.
+export const AUDIO_RESPONSES = [
+  {
+    id: 'saludo',
+    triggers: /(?:manda|envia|envíame|quiero|pon)(?:me)? (?:un )?audio(?: de saludo)?|audio saludo/,
+    src: 'assets/audio/saludo.mp3',
+    speech: 'Hola, qué gusto escucharte. Estoy aquí para conversar contigo.',
+    caption: 'Audio · saludo'
+  },
+  {
+    id: 'animo',
+    triggers: /(?:manda|envia|envíame|quiero|pon)(?:me)? (?:un )?audio (?:de )?(?:animo|ánimo|motivacion|motivación)|audio (?:de )?(?:animo|ánimo)/,
+    src: 'assets/audio/animo.mp3',
+    speech: 'Respira. Vas paso a paso y puedes con esto. Confío en ti.',
+    caption: 'Audio · ánimo'
+  }
+];
+
 export class Chatbot {
   constructor() {
     this.profile = {
@@ -56,6 +78,7 @@ export class Chatbot {
     if (/^\/hora\b/.test(normalized)) return this.time();
     if (/^\/sumar\b/.test(normalized)) return this.sum(text);
     if (/^\/calcular\b/.test(normalized)) return this.calculate(text.replace(/^\/calcular\s*/i, ''));
+    if (/^\/audio\b/.test(normalized)) return this.customAudio(text.replace(/^\/audio\s*/i, ''));
     if (/^\/etapa\b/.test(normalized)) {
       return `Etapa actual: ${this.profile.stage} (${this.profile.messagesInStage} mensajes). Modo: ${this.mode}. Enfadada por Manuela: ${this.jealousOfManuela ? 'sí' : 'no'}.`;
     }
@@ -72,6 +95,10 @@ export class Chatbot {
     if (this.jealousOfManuela) {
       return this.manuelaAngryReply(false);
     }
+
+    // Los audios están disponibles en todos los modos, sin depender de la etapa.
+    const audioResponse = this.trySendAudio(normalized);
+    if (audioResponse) return audioResponse;
 
     if (/^\/saltar\b/.test(normalized) || /^(activar |pon |cambia a |quiero )?modo novia\b/.test(normalized) || /^(vamos a lo|pasemos a lo|quiero ya|directo a lo) (erotico|sexual|sucio|caliente)\b/.test(normalized)) {
       this.mode = 'girlfriend';
@@ -623,6 +650,23 @@ export class Chatbot {
   }
 
   // ========== MEDIA (sin repeticiones, fotos primero) ==========
+  customAudio(message) {
+    const speech = message.trim();
+    if (!speech) {
+      return 'Escribe el texto después de /audio. Ejemplo: /audio Hola, ¿cómo estás?';
+    }
+    return { text: '', audio: { speech, caption: 'Audio generado desde texto' } };
+  }
+
+  trySendAudio(normalized) {
+    const selected = AUDIO_RESPONSES.find(item => item.triggers.test(normalized));
+    if (!selected) return null;
+    return {
+      text: 'Te envío un audio.',
+      audio: { src: selected.src, speech: selected.speech, caption: selected.caption }
+    };
+  }
+
   trySendMedia(normalized) {
     // Bloqueo total de media si está enfadada por Manuela
     if (this.jealousOfManuela) return null;
@@ -787,6 +831,7 @@ export class Chatbot {
 • /sumar 12 8 — suma dos números
 • /calcular (12 + 8) * 2 — resuelve una expresión
 • /hora — muestra fecha y hora actual
+• /audio <texto> — genera un audio con ese texto usando la voz del navegador
 • /limpiar — vacía la conversación, reinicia etapas/media y cancela enfado
 • /etapa — muestra la etapa actual de la conversación
 • /saltar o “modo novia” o “vamos a lo erótico” — salta directo a lo sexual
@@ -800,6 +845,7 @@ Progresión natural:
 Media (sin repeticiones):
 • “muéstrame algo”, “quiero tu pack”, “sorprendeme”
 • “manda foto” / “manda video”
+• “manda un audio de saludo” / “manda un audio de ánimo”
 • mencionar tetas, culo, vagina, lengua
 
 Nota: si mencionas a Manuela / Manuelita / Manu / “la otra IA”, me enfado,

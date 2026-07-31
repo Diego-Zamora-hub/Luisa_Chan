@@ -8,6 +8,9 @@ const clearButton = document.querySelector('#clearButton');
 const modeButton = document.querySelector('#modeButton');
 const imageInput = document.querySelector('#imageInput');
 const attachButton = document.querySelector('#attachButton');
+const audioInput = document.querySelector('#audioInput');
+const audioAttachButton = document.querySelector('#audioAttachButton');
+const recordButton = document.querySelector('#recordButton');
 const emojiButton = document.querySelector('#emojiButton');
 const emojiPicker = document.querySelector('#emojiPicker');
 const avatarButton = document.querySelector('#avatarButton');
@@ -69,6 +72,29 @@ function addVideoMessage(src, sender, caption = '') {
   appendTime(bubble, sender);
   row.append(bubble); conversation.append(row); scrollToEnd();
 }
+function addAudioMessage({ src = '', speech = '', caption = '' }, sender) {
+  const row = document.createElement('div'); row.className = `message-row ${sender}`;
+  const bubble = document.createElement('div'); bubble.className = 'bubble audio-bubble';
+  const player = document.createElement('audio'); player.controls = true; player.preload = 'metadata';
+  const label = document.createElement('span'); label.className = 'audio-label'; label.textContent = caption || 'Audio';
+  const addSpeechControl = () => {
+    if (!speech || bubble.querySelector('.speech-play')) return;
+    const play = document.createElement('button'); play.type = 'button'; play.className = 'speech-play'; play.textContent = '▶ Escuchar voz';
+    play.addEventListener('click', () => speakText(speech)); bubble.prepend(play);
+  };
+  if (src) {
+    player.src = src;
+    player.addEventListener('error', () => { player.remove(); addSpeechControl(); }, { once: true });
+    bubble.append(player);
+  } else addSpeechControl();
+  bubble.append(label); appendTime(bubble, sender); row.append(bubble); conversation.append(row); scrollToEnd();
+}
+function speakText(text) {
+  if (!('speechSynthesis' in window)) { addMessage('Tu navegador no tiene síntesis de voz disponible.', 'bot'); return; }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text); utterance.lang = 'es-CO'; utterance.rate = .98;
+  window.speechSynthesis.speak(utterance);
+}
 function showTyping() { const item = document.createElement('div'); item.className = 'typing'; item.id = 'typing'; item.innerHTML = '<span>Escribiendo</span><span class="typing-dots"><i></i><i></i><i></i></span>'; conversation.append(item); scrollToEnd(); }
 function clearConversation(withWelcome = true) {
   conversation.innerHTML = '';
@@ -89,6 +115,7 @@ async function sendMessage(text) {
   else if (response?.type === 'activate-girlfriend') modeButton.click();
   else if (typeof response === 'object' && response.image) { addMessage(response.text, 'bot'); addImageMessage(response.image, 'bot', response.caption); }
   else if (typeof response === 'object' && response.video) { addMessage(response.text, 'bot'); addVideoMessage(response.video, 'bot', response.caption); }
+  else if (typeof response === 'object' && response.audio) { if (response.text) addMessage(response.text, 'bot'); addAudioMessage(response.audio, 'bot'); }
   else addMessage(response, 'bot');
   isReplying = false; input.disabled = false; input.focus();
 }
@@ -96,6 +123,51 @@ form.addEventListener('submit', event => { event.preventDefault(); sendMessage(i
 clearButton.addEventListener('click', () => clearConversation());
 attachButton.addEventListener('click', () => imageInput.click());
 imageInput.addEventListener('change', () => { const file = imageInput.files?.[0]; if (!file) return; addImageMessage(URL.createObjectURL(file), 'user', file.name); imageInput.value = ''; });
+audioAttachButton.addEventListener('click', () => audioInput.click());
+audioInput.addEventListener('change', () => {
+  const file = audioInput.files?.[0]; if (!file) return;
+  addAudioMessage({ src: URL.createObjectURL(file), caption: file.name }, 'user');
+  audioInput.value = '';
+  setTimeout(() => addMessage('Recibí tu audio. Para dictar texto directamente en el mensaje, usa el botón del micrófono.', 'bot'), 350);
+});
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null; let isDictating = false;
+function stopDictation() {
+  if (recognition && isDictating) recognition.stop();
+}
+function startDictation() {
+  if (!SpeechRecognition) {
+    addMessage('Tu navegador no admite dictado de voz. Usa Chrome o Edge para esta función.', 'bot');
+    return;
+  }
+  recognition = new SpeechRecognition();
+  recognition.lang = 'es-CO';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  const initialText = input.value.trim();
+  let finalText = initialText;
+  recognition.addEventListener('result', event => {
+    let interimText = '';
+    for (let index = event.resultIndex; index < event.results.length; index += 1) {
+      const transcript = event.results[index][0].transcript.trim();
+      if (event.results[index].isFinal) finalText = `${finalText} ${transcript}`.trim();
+      else interimText += ` ${transcript}`;
+    }
+    input.value = `${finalText}${interimText}`.trim();
+  });
+  recognition.addEventListener('end', () => {
+    isDictating = false; recordButton.classList.remove('is-recording');
+    recordButton.title = 'Dictar mensaje'; recordButton.setAttribute('aria-label', 'Dictar mensaje'); input.focus();
+  });
+  recognition.addEventListener('error', event => {
+    if (event.error !== 'aborted' && event.error !== 'no-speech') {
+      addMessage(event.error === 'not-allowed' ? 'Necesito permiso para usar el micrófono.' : 'No pude transcribir el audio. Inténtalo de nuevo.', 'bot');
+    }
+  });
+  isDictating = true; recordButton.classList.add('is-recording');
+  recordButton.title = 'Detener dictado'; recordButton.setAttribute('aria-label', 'Detener dictado'); recognition.start();
+}
+recordButton.addEventListener('click', () => { if (isDictating) stopDictation(); else startDictation(); });
 emojiButton.addEventListener('click', () => { emojiPicker.hidden = !emojiPicker.hidden; });
 emojiPicker.querySelectorAll('button').forEach(button => button.addEventListener('click', () => { input.value += button.textContent; input.focus(); emojiPicker.hidden = true; }));
 modeButton.addEventListener('click', () => {
