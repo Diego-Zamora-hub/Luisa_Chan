@@ -1,4 +1,4 @@
-/** Motor local de Chantreapp: conversación, comandos y cálculos. */
+/** Motor local de Luisa Chan: conversación, comandos y cálculos. */
 export class Chatbot {
   constructor() {
     this.profile = { name: '', lastTopic: '', mood: '' };
@@ -53,7 +53,7 @@ export class Chatbot {
 
     // Modo normal (sin cambios)
     if (/(como estas|como te va|todo bien)/.test(normalized)) return this.pick(['Estoy muy bien, gracias por preguntar. Listo para conversar contigo.', 'Todo en orden por aquí. Me gusta que preguntes; ¿cómo estás tú?', 'Con energía digital y dispuesto a ayudarte. ¿Cómo va tu día?']);
-    if (/(quien eres|que eres|tu nombre|hablame de ti)/.test(normalized)) return 'Soy Chantreapp, un asistente conversacional local. Puedo charlar, recordar tu nombre mientras esta pestaña esté abierta, resolver operaciones y ayudarte a ordenar ideas.';
+    if (/(quien eres|que eres|tu nombre|hablame de ti)/.test(normalized)) return 'Soy Luisa Chan, un asistente conversacional local. Puedo charlar, recordar tu nombre mientras esta pestaña esté abierta, resolver operaciones y ayudarte a ordenar ideas.';
     if (/(que puedes hacer|que sabes hacer|en que me ayudas)/.test(normalized)) return 'Puedo conversar contigo, responder preguntas cotidianas, hacer cálculos, darte ideas y usar comandos. Escribe /ayuda para ver las acciones exactas.';
     if (/(gracias|muchas gracias|te lo agradezco)/.test(normalized)) return this.pick(['¡Con mucho gusto!', 'Para eso estoy. ¿Seguimos con algo más?', 'Encantado de ayudar.']);
     if (/(adios|hasta luego|nos vemos|chao|me voy)/.test(normalized)) return this.pick(['¡Hasta pronto! Que tengas un gran día.', 'Nos vemos. Aquí estaré cuando quieras volver.', 'Cuídate mucho. Fue un gusto conversar contigo.']);

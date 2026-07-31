@@ -22,7 +22,7 @@ button { cursor: pointer; }
 .brand { display: flex; align-items: center; gap: 13px; }
 .avatar { position: relative; width: 49px; height: 49px; flex: 0 0 auto; display: grid; place-items: center; overflow: hidden; border: 0; border-radius: 16px; color: #062019; font-family: "Plus Jakarta Sans", sans-serif; font-size: 23px; font-weight: 800; background: linear-gradient(145deg, #65e5bd, #16a77c); box-shadow: inset 0 1px 1px rgba(255,255,255,.35); transition: .2s; }
 .avatar:hover, .avatar:focus-visible { filter: brightness(1.08); outline: none; }
-.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
 .avatar #avatarFallback { color: #f2fffa; transform: translate(-2px, 4px); }
 .avatar::after { content: '✎'; position: absolute; inset: auto 0 0 0; padding: 3px 0 2px; color: #fff; font-size: 10px; text-align: center; background: rgba(0, 0, 0, .45); opacity: 0; transition: .2s; }
 .avatar:hover::after, .avatar:focus-visible::after { opacity: 1; }

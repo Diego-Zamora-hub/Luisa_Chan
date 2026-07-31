@@ -21,6 +21,9 @@ const wallpaperInput = document.querySelector('#wallpaperInput');
 let isReplying = false;
 
 const STORAGE_KEYS = { avatar: 'chantreapp-avatar', wallpaper: 'chantreapp-wallpaper', wallpaperImage: 'chantreapp-wallpaper-image' };
+// Foto de perfil predeterminada: coloca tu imagen en assets/foto_perfil_predeterminada.jpg
+// (o cambia esta ruta) y se mostrará automáticamente mientras el usuario no suba una propia.
+const DEFAULT_AVATAR = 'assets/foto_perfil_predeterminada.jpeg';
 const DOUBLE_TICK_SVG = '<svg viewBox="0 0 18 12" aria-hidden="true"><path d="M1 6.5 4.5 10 11 2" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 6.5 10 10 16.5 2" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 function now() { return new Intl.DateTimeFormat('es-CO', { hour: '2-digit', minute: '2-digit' }).format(new Date()); }
@@ -124,7 +127,15 @@ avatarInput.addEventListener('change', () => {
   reader.readAsDataURL(file);
   avatarInput.value = '';
 });
-try { const savedAvatar = localStorage.getItem(STORAGE_KEYS.avatar); if (savedAvatar) applyAvatar(savedAvatar); } catch { /* sin acceso a localStorage */ }
+(function initAvatar() {
+  let savedAvatar = null;
+  try { savedAvatar = localStorage.getItem(STORAGE_KEYS.avatar); } catch { /* sin acceso a localStorage */ }
+  if (savedAvatar) { applyAvatar(savedAvatar); return; }
+  // Sin foto guardada por el usuario: intenta cargar la imagen predeterminada del proyecto.
+  // Si el archivo no existe (404), se muestra la inicial "L" como respaldo.
+  avatarImage.addEventListener('error', () => applyAvatar(null), { once: true });
+  applyAvatar(DEFAULT_AVATAR);
+})();
 
 // --- Fondo de chat personalizable (estilo WhatsApp) ---
 const WALLPAPER_CLASSES = ['wallpaper-default', 'wallpaper-plain', 'wallpaper-grid', 'wallpaper-lines', 'wallpaper-waves', 'wallpaper-hearts', 'wallpaper-custom'];
