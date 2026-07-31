@@ -30,6 +30,12 @@ Por defecto puedes crear `assets/audio/saludo.mp3` y `assets/audio/animo.mp3`; d
 
 Los audios adjuntos por el usuario se pueden reproducir dentro del chat. El botón de micrófono usa el reconocimiento de voz del navegador para pasar lo que dices directamente al campo de mensaje; funciona en navegadores con Web Speech API (normalmente Chrome y Edge) y requiere permiso de micrófono. La transcripción de archivos ya grabados requeriría conectar un servicio de transcripción o una API de voz.
 
+## Pack de imágenes
+
+Las imágenes que se envían juntas al pedir `pack`, “sorprender” o “quiero verte” están configuradas en `PACK_IMAGES` dentro de `js/bot.js`. Por defecto incluye `assets/pack/foto1.jpeg` hasta `foto5.jpeg`.
+
+Para agregar otra imagen al pack, colócala en `assets/pack/` y añade su ruta a ese arreglo. Tras enviar todas las imágenes del pack una vez, el bot responde con otro medio disponible en lugar de repetirlas. `/limpiar` habilita de nuevo el pack.
+
 ## Reemplazar imágenes de ejemplo
 
 Sustituye los archivos vacíos `assets/foto_normal.jpg`, `assets/foto_feliz.jpg` y `assets/foto_romantica.jpg` por tus propias imágenes, conservando los mismos nombres. Si prefieres usar otros nombres, actualiza las rutas correspondientes en `js/bot.js`. Hasta que los reemplaces, el chat mostrará un aviso en lugar de una imagen rota.

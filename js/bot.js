@@ -61,6 +61,16 @@ export const AUDIO_RESPONSES = [
   }
 ];
 
+// En una página estática el navegador no puede leer automáticamente una carpeta.
+// Añade aquí cada imagen que coloques en assets/pack/ para incluirla en el pack.
+const PACK_IMAGES = [
+  'assets/pack/foto1.jpeg',
+  'assets/pack/foto2.jpeg',
+  'assets/pack/foto3.jpeg',
+  'assets/pack/foto4.jpeg',
+  'assets/pack/foto5.jpeg'
+];
+
 export class Chatbot {
   constructor() {
     this.profile = {
@@ -843,7 +853,16 @@ export class Chatbot {
     const mark = (path) => this.sentMedia.add(path);
 
     // Pack / sorprender / quiero verte
-    if (/(muestra algo|muéstrame algo|quiero verte|quiero ver te|quiero tu pack|mandame tu pack|envíame tu pack|sorprendeme|sorpréndeme|enséñame algo|ensename algo|quiero ver tu cuerpo|muéstrame tu cuerpo|manda pack|envía pack)/.test(normalized)) {
+    if (/(\bpack\b|muestra algo|muéstrame algo|quiero verte|quiero ver te|sorprend\w*|enséñame algo|ensename algo|quiero ver tu cuerpo|muéstrame tu cuerpo)/.test(normalized)) {
+      const pack = PACK_IMAGES.filter(available);
+      if (pack.length > 0) {
+        pack.forEach(mark);
+        return {
+          text: 'Te envío el pack completo. Disfrútalo.',
+          images: pack.map(path => ({ path, caption: path.split('/').pop() }))
+        };
+      }
+
       // Preferir fotos no enviadas primero
       const photoOptions = [
         { path: 'assets/foto_romantica.jpg', text: 'Toma esta foto… imagina que estoy así de caliente por ti.', caption: 'foto_romantica.jpg' },

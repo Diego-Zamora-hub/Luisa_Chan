@@ -137,6 +137,7 @@ async function sendMessage(text) {
   if (response?.type === 'clear') clearConversation(false);
   else if (response?.type === 'angry') { setAngryMode(true); addMessage(response.text, 'bot'); }
   else if (response?.type === 'activate-girlfriend') modeButton.click();
+  else if (typeof response === 'object' && response.images) { addMessage(response.text, 'bot'); response.images.forEach(image => addImageMessage(image.path, 'bot', image.caption)); }
   else if (typeof response === 'object' && response.image) { addMessage(response.text, 'bot'); addImageMessage(response.image, 'bot', response.caption); }
   else if (typeof response === 'object' && response.video) { addMessage(response.text, 'bot'); addVideoMessage(response.video, 'bot', response.caption); }
   else if (typeof response === 'object' && response.audio) { if (response.text) addMessage(response.text, 'bot'); addAudioMessage(response.audio, 'bot'); }
