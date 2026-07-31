@@ -15,6 +15,7 @@ Abre `index.html` en cualquier navegador moderno. Para desarrollo local también
 - Selector de emojis y botón para adjuntar imágenes desde tu equipo.
 - Respuestas con imágenes de contexto para términos como flores, amor o paisaje. Los archivos reemplazables están en `assets/`.
 - Modo Novia con estilo rosa y tono romántico. Se activa con el botón del encabezado o escribiendo `modo novia`.
+- Si se menciona Manuela, Manu vinculada a otra IA, o “la otra IA”, Luisa entra en modo enojo: se bloquean fotos, videos y el modo Novia, y el chat adopta un estilo rojo. `/limpiar` o el botón de limpiar reinician ese estado.
 - Respuestas con videos `.mp4` de contexto. Los reproductores aparecerán cuando se mencione un video, clip, paisaje, amor o algo alegre.
 - Audios bidireccionales: adjunta `.mp3`, `.m4a`, `.wav`, `.ogg` o `.webm`, y usa el micrófono para dictar texto directamente en el mensaje. El bot puede enviar MP3 configurables o generar una locución desde texto.
 

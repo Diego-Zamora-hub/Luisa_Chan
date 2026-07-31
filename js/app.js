@@ -22,6 +22,7 @@ const wallpaperPanel = document.querySelector('#wallpaperPanel');
 const wallpaperClose = document.querySelector('#wallpaperClose');
 const wallpaperInput = document.querySelector('#wallpaperInput');
 let isReplying = false;
+let isAngry = false;
 
 const STORAGE_KEYS = { avatar: 'chantreapp-avatar', wallpaper: 'chantreapp-wallpaper', wallpaperImage: 'chantreapp-wallpaper-image' };
 // Foto de perfil predeterminada: coloca tu imagen en assets/foto_perfil_predeterminada.jpg
@@ -31,6 +32,20 @@ const DOUBLE_TICK_SVG = '<svg viewBox="0 0 18 12" aria-hidden="true"><path d="M1
 
 function now() { return new Intl.DateTimeFormat('es-CO', { hour: '2-digit', minute: '2-digit' }).format(new Date()); }
 function scrollToEnd() { conversation.scrollTop = conversation.scrollHeight; }
+function setAngryMode(enabled) {
+  isAngry = enabled;
+  document.body.classList.toggle('angry-mode', enabled);
+  if (enabled) {
+    document.body.classList.remove('girlfriend-mode');
+    modeButton.disabled = true;
+    modeButton.setAttribute('aria-pressed', 'false');
+    modeButton.title = 'No disponible mientras Luisa está enfadada';
+    bot.setMode('standard');
+  } else {
+    modeButton.disabled = false;
+    modeButton.title = 'Activar modo Novia';
+  }
+}
 function appendTime(bubble, sender) {
   const time = document.createElement('span'); time.className = 'message-time';
   const stamp = document.createElement('span'); stamp.textContent = now(); time.append(stamp);
@@ -97,13 +112,14 @@ function speakText(text) {
 }
 function showTyping() { const item = document.createElement('div'); item.className = 'typing'; item.id = 'typing'; item.innerHTML = '<span>Escribiendo</span><span class="typing-dots"><i></i><i></i><i></i></span>'; conversation.append(item); scrollToEnd(); }
 function clearConversation(withWelcome = true) {
+  setAngryMode(false);
   conversation.innerHTML = '';
   if (withWelcome) {
     const stamp = document.createElement('div');
     stamp.className = 'day-stamp';
     stamp.textContent = 'Hoy';
     conversation.append(stamp);
-    addMessage('¡Hola! Soy Chantreapp. Activa el Modo Novia si quieres que me ponga más intensa y explícita contigo ♡', 'bot');
+    addMessage('¡Hola! Soy Luisa. Qué gusto saludarte, ¿cómo te llamas?', 'bot');
   }
 }
 async function sendMessage(text) {
@@ -112,6 +128,7 @@ async function sendMessage(text) {
   await new Promise(resolve => setTimeout(resolve, 650 + Math.min(value.length * 8, 700)));
   document.querySelector('#typing')?.remove(); const response = bot.getResponse(value);
   if (response?.type === 'clear') clearConversation(false);
+  else if (response?.type === 'angry') { setAngryMode(true); addMessage(response.text, 'bot'); }
   else if (response?.type === 'activate-girlfriend') modeButton.click();
   else if (typeof response === 'object' && response.image) { addMessage(response.text, 'bot'); addImageMessage(response.image, 'bot', response.caption); }
   else if (typeof response === 'object' && response.video) { addMessage(response.text, 'bot'); addVideoMessage(response.video, 'bot', response.caption); }
@@ -120,7 +137,7 @@ async function sendMessage(text) {
   isReplying = false; input.disabled = false; input.focus();
 }
 form.addEventListener('submit', event => { event.preventDefault(); sendMessage(input.value); });
-clearButton.addEventListener('click', () => clearConversation());
+clearButton.addEventListener('click', () => { bot.reset(); clearConversation(); });
 attachButton.addEventListener('click', () => imageInput.click());
 imageInput.addEventListener('change', () => { const file = imageInput.files?.[0]; if (!file) return; addImageMessage(URL.createObjectURL(file), 'user', file.name); imageInput.value = ''; });
 audioAttachButton.addEventListener('click', () => audioInput.click());
@@ -171,6 +188,7 @@ recordButton.addEventListener('click', () => { if (isDictating) stopDictation();
 emojiButton.addEventListener('click', () => { emojiPicker.hidden = !emojiPicker.hidden; });
 emojiPicker.querySelectorAll('button').forEach(button => button.addEventListener('click', () => { input.value += button.textContent; input.focus(); emojiPicker.hidden = true; }));
 modeButton.addEventListener('click', () => {
+  if (isAngry) return;
   const enabled = !document.body.classList.contains('girlfriend-mode');
   document.body.classList.toggle('girlfriend-mode', enabled);
   modeButton.setAttribute('aria-pressed', String(enabled));

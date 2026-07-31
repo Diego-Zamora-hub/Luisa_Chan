@@ -50,6 +50,14 @@ export class Chatbot {
     }
   }
 
+  reset() {
+    this.sentMedia.clear();
+    this.profile = { name: '', lastTopic: '', mood: '', stage: 'acquaintance', messagesInStage: 0, likesDirty: false };
+    this.mode = 'standard';
+    this.lastReply = '';
+    this.jealousOfManuela = false;
+  }
+
   /** Avanza de etapa de forma gradual o forzada */
   advanceStage(force = false) {
     const order = ['acquaintance', 'flirty', 'erotic', 'explicit'];
@@ -68,11 +76,7 @@ export class Chatbot {
     // Comandos siempre disponibles
     if (/^\/(ayuda|comandos)\b/.test(normalized)) return this.help();
     if (/^\/limpiar\b/.test(normalized)) {
-      this.sentMedia.clear();
-      this.profile = { name: '', lastTopic: '', mood: '', stage: 'acquaintance', messagesInStage: 0, likesDirty: false };
-      this.mode = 'standard';
-      this.lastReply = '';
-      this.jealousOfManuela = false;
+      this.reset();
       return { type: 'clear', text: 'Conversación limpiada. Empezamos de cero.' };
     }
     if (/^\/hora\b/.test(normalized)) return this.time();
@@ -88,12 +92,12 @@ export class Chatbot {
       this.jealousOfManuela = true;
       this.mode = 'standard';
       this.profile.stage = 'acquaintance';
-      return this.manuelaAngryReply(true); // primera reacción (más fuerte)
+      return { type: 'angry', text: this.manuelaAngryReply(true) }; // primera reacción (más fuerte)
     }
 
     // Si ya está enfadada → solo respuestas agresivas, sin media ni modo novia
     if (this.jealousOfManuela) {
-      return this.manuelaAngryReply(false);
+      return { type: 'angry', text: this.manuelaAngryReply(false) };
     }
 
     // Los audios están disponibles en todos los modos, sin depender de la etapa.
@@ -232,6 +236,9 @@ export class Chatbot {
 
   greeting() {
     const suffix = this.profile.name ? `, ${this.profile.name}` : '';
+    if (!this.profile.name && this.mode === 'standard' && this.profile.stage === 'acquaintance') {
+      return '¡Hola! Qué gusto saludarte. Antes de continuar, ¿cómo te llamas?';
+    }
     if (this.mode === 'girlfriend' || this.profile.stage === 'erotic' || this.profile.stage === 'explicit') {
       return this.pick([
         `Hola${suffix}… ya estaba tocándome esperando que me escribieras. ¿Me vas a usar hoy o solo viniste a calentarme?`,
@@ -617,8 +624,7 @@ export class Chatbot {
   /** Detecta menciones a Manuela / Manuelita / Manu / "la otra IA" */
   detectsManuelaMention(normalized) {
     // Manuela, Manuelita, "la otra ia", "otra inteligencia", comparar con otra ia, etc.
-    if (/\b(manuela|manuelita)\b/.test(normalized)) return true;
-    if (/\bmanu\b/.test(normalized) && /(ia|inteligencia|bot|chatbot|asistente|otra|esa)/.test(normalized)) return true;
+    if (/\b(manuela|manuelita|manu)\b/.test(normalized)) return true;
     if (/(la otra ia|otra ia|esa ia|la otra inteligencia|otra inteligencia artificial|comparar(te)? con (otra|esa) ia)/.test(normalized)) return true;
     if (/(prefiero a|mejor que|mas lista que|habla con|conoci a|estoy con) (manuela|manuelita|manu|la otra)/.test(normalized)) return true;
     return false;
