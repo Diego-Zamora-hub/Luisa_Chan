@@ -8,6 +8,7 @@ const form = document.querySelector('#chatForm');
 const input = document.querySelector('#messageInput');
 const clearButton = document.querySelector('#clearButton');
 const modeButton = document.querySelector('#modeButton');
+const pageIcon = document.querySelector('#pageIcon');
 const imageInput = document.querySelector('#imageInput');
 const attachButton = document.querySelector('#attachButton');
 const audioInput = document.querySelector('#audioInput');
@@ -31,6 +32,9 @@ const STORAGE_KEYS = { avatar: 'chantreapp-avatar', wallpaper: 'chantreapp-wallp
 // (o cambia esta ruta) y se mostrará automáticamente mientras el usuario no suba una propia.
 const DEFAULT_AVATAR = 'assets/foto_perfil_predeterminada.jpeg';
 const DOUBLE_TICK_SVG = '<svg viewBox="0 0 18 12" aria-hidden="true"><path d="M1 6.5 4.5 10 11 2" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 6.5 10 10 16.5 2" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+// Espera visible antes de cada respuesta: 0,9 s como minimo y hasta 1,8 s.
+const RESPONSE_DELAY = { minimum: 900, perCharacter: 14, maximumExtra: 900 };
+const PAGE_ICONS = { standard: 'assets/iconos/Luisa_icon_1.ico', girlfriend: 'assets/iconos/Luisa_icon_2.ico' };
 
 introStart.addEventListener('click', () => {
   introScreen.classList.add('is-leaving');
@@ -39,11 +43,13 @@ introStart.addEventListener('click', () => {
 
 function now() { return new Intl.DateTimeFormat('es-CO', { hour: '2-digit', minute: '2-digit' }).format(new Date()); }
 function scrollToEnd() { conversation.scrollTop = conversation.scrollHeight; }
+function updatePageIcon(isGirlfriend) { pageIcon.href = isGirlfriend ? PAGE_ICONS.girlfriend : PAGE_ICONS.standard; }
 function setAngryMode(enabled) {
   isAngry = enabled;
   document.body.classList.toggle('angry-mode', enabled);
   if (enabled) {
     document.body.classList.remove('girlfriend-mode');
+    updatePageIcon(false);
     modeButton.disabled = true;
     modeButton.setAttribute('aria-pressed', 'false');
     modeButton.title = 'No disponible mientras Luisa está enfadada';
@@ -132,7 +138,8 @@ function clearConversation(withWelcome = true) {
 async function sendMessage(text) {
   const value = text.trim(); if (!value || isReplying) return;
   addMessage(value, 'user'); input.value = ''; isReplying = true; input.disabled = true; showTyping();
-  await new Promise(resolve => setTimeout(resolve, 650 + Math.min(value.length * 8, 700)));
+  const delay = RESPONSE_DELAY.minimum + Math.min(value.length * RESPONSE_DELAY.perCharacter, RESPONSE_DELAY.maximumExtra);
+  await new Promise(resolve => setTimeout(resolve, delay));
   document.querySelector('#typing')?.remove(); const response = bot.getResponse(value);
   if (response?.type === 'clear') clearConversation(false);
   else if (response?.type === 'angry') { setAngryMode(true); addMessage(response.text, 'bot'); }
@@ -199,6 +206,7 @@ modeButton.addEventListener('click', () => {
   if (isAngry) return;
   const enabled = !document.body.classList.contains('girlfriend-mode');
   document.body.classList.toggle('girlfriend-mode', enabled);
+  updatePageIcon(enabled);
   modeButton.setAttribute('aria-pressed', String(enabled));
   modeButton.innerHTML = enabled ? '<span aria-hidden="true">♥</span> Modo Novia' : '<span aria-hidden="true">♡</span> Modo Novia';
   modeButton.title = enabled ? 'Desactivar modo Novia' : 'Activar modo Novia';

@@ -5,6 +5,15 @@
  *  (bloquea media y responde con insultos/amenazas hasta /limpiar).
  */
 
+/** Información de versión del bot (actualizar al publicar cambios) */
+export const BOT_VERSION = {
+  version: '2.0.5',
+  info: 'Actualización de interfaz, ahora responde a su tiempo, incluyen informacion del sistema, cantidad de lineas implementadas.',
+  lines: 1137, // actualizar con `wc -l bot.js` si el archivo cambia
+  creator: 'Diego Z',
+  contributors: ['Tania', 'Sofia']
+};
+
 // Configura los audios del bot aquí. Si `src` apunta a un MP3 válido dentro de
 // assets/audio/, se reproducirá ese archivo. Si no existe, se usará `speech`
 // como alternativa con la voz del navegador. Puedes añadir tantas entradas como
@@ -142,6 +151,9 @@ export class Chatbot {
     if (/^\/audio\b/.test(normalized)) return this.customAudio(text.replace(/^\/audio\s*/i, ''));
     if (/^\/etapa\b/.test(normalized)) {
       return `Etapa actual: ${this.profile.stage} (${this.profile.messagesInStage} mensajes). Modo: ${this.mode}. Enfadada por Manuela: ${this.jealousOfManuela ? 'sí' : 'no'}.`;
+    }
+    if (/^\/version\b/.test(normalized) || /(que version eres|qué versión eres|que version tienes|qué versión tienes|cual es tu version|cuál es tu versión|version del bot|versión del bot)/.test(normalized)) {
+      return this.versionInfo();
     }
 
     // --- Subtrama Manuela: detección (se activa una vez y queda permanente hasta /limpiar) ---
@@ -1011,10 +1023,22 @@ export class Chatbot {
     ]);
   }
 
+  versionInfo() {
+    const v = BOT_VERSION;
+    return [
+      `Versión: ${v.version}`,
+      `Información general: ${v.info}`,
+      `Cantidad de líneas en el bot: ${v.lines}`,
+      `Creador: ${v.creator}`,
+      `Contribuyentes: ${v.contributors.join(', ')}`
+    ].join('\n');
+  }
+
   help() {
     return `Estas son mis acciones disponibles:
 
 • /ayuda o /comandos — muestra esta lista
+• /version — muestra versión, creador y metadatos del bot
 • /sumar 12 8 — suma dos números
 • /calcular (12 + 8) * 2 — resuelve una expresión
 • /hora — muestra fecha y hora actual
