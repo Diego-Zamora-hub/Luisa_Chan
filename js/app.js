@@ -6,6 +6,7 @@ const introStart = document.querySelector('#introStart');
 const conversation = document.querySelector('#conversation');
 const form = document.querySelector('#chatForm');
 const input = document.querySelector('#messageInput');
+const quickActions = document.querySelector('.quick-actions');
 const clearButton = document.querySelector('#clearButton');
 const modeButton = document.querySelector('#modeButton');
 const pageIcon = document.querySelector('#pageIcon');
@@ -43,6 +44,36 @@ const MESSAGE_SOUNDS = {
   sent: 'assets/audio/efecto_mensaje_mandar.mp3',
   received: 'assets/audio/efecto_mensaje_recibir.mp3'
 };
+const messageSoundPlayers = Object.fromEntries(
+  Object.entries(MESSAGE_SOUNDS).map(([type, source]) => {
+    const player = new Audio(source);
+    player.preload = 'auto';
+    player.load();
+    return [type, player];
+  })
+);
+const QUICK_ACTIONS = {
+  default: [
+    ['Ver comandos', '/ayuda'], ['Cuéntame un chiste', 'Cuéntame un chiste'], ['Ver hora', '/hora'],
+    ['Probar cálculo', '¿Cuánto es 250 más 45?'], ['Pedir un audio', 'Manda un audio de saludo'], ['Ver una foto', 'Muéstrame una foto']
+  ],
+  math: [
+    ['Otro cálculo', '¿Cuánto es 120 más 80?'], ['Multiplicar', 'Multiplica 12 por 8'],
+    ['Calculadora', '/calcular (12 + 8) * 2'], ['Ver hora', '/hora']
+  ],
+  audio: [
+    ['Audio de saludo', 'Manda un audio de saludo'], ['Audio de ánimo', 'Manda un audio de ánimo'],
+    ['Crear un audio', '/audio Hola, ¿cómo estás?'], ['Ver comandos', '/ayuda']
+  ],
+  media: [
+    ['Ver una foto', 'Muéstrame una foto'], ['Ver un video', 'Manda un video'],
+    ['Pedir pack', 'Quiero tu pack'], ['Pedir audio', 'Manda un audio de saludo']
+  ],
+  greeting: [
+    ['Decir mi nombre', 'Me llamo '], ['Qué puedes hacer', '¿Qué puedes hacer?'],
+    ['Cuéntame un chiste', 'Cuéntame un chiste'], ['Ver comandos', '/ayuda']
+  ]
+};
 const PLAY_ICON_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7Z"/></svg>';
 const PAUSE_ICON_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>';
 const STOP_ICON_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1"/></svg>';
@@ -61,9 +92,27 @@ function playModeSound(enabled) {
   sound.play().catch(() => { /* El archivo puede no haberse configurado. */ });
 }
 function playMessageSound(type) {
-  const sound = new Audio(MESSAGE_SOUNDS[type]);
-  sound.preload = 'auto';
+  const sound = messageSoundPlayers[type];
+  if (!sound) return;
+  sound.currentTime = 0;
   sound.play().catch(() => { /* El archivo puede no haberse configurado o el navegador bloqueó el audio. */ });
+}
+function getQuickActions(context = '') {
+  const text = String(context).toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (/(audio|voz|escuchar|mp3|m4a)/.test(text)) return QUICK_ACTIONS.audio;
+  if (/(foto|imagen|video|pack|muestrame|muestra)/.test(text)) return QUICK_ACTIONS.media;
+  if (/(calcula|calculo|sumar|suma|multiplica|divide|cuanto es|\d+\s*(mas|menos|por|entre|[+*\/-]))/.test(text)) return QUICK_ACTIONS.math;
+  if (/(hola|como te llamas|me llamo|nombre)/.test(text)) return QUICK_ACTIONS.greeting;
+  return QUICK_ACTIONS.default;
+}
+function renderQuickActions(context = '') {
+  quickActions.replaceChildren();
+  getQuickActions(context).forEach(([label, message]) => {
+    const button = document.createElement('button');
+    button.type = 'button'; button.textContent = label;
+    button.addEventListener('click', () => sendMessage(message));
+    quickActions.append(button);
+  });
 }
 function setAngryMode(enabled) {
   isAngry = enabled;
@@ -192,6 +241,7 @@ function speakText(text) {
 function showTyping() { const item = document.createElement('div'); item.className = 'typing'; item.id = 'typing'; item.innerHTML = '<span>Escribiendo</span><span class="typing-dots"><i></i><i></i><i></i></span>'; conversation.append(item); scrollToEnd(); }
 function clearConversation(withWelcome = true) {
   setAngryMode(false);
+  renderQuickActions();
   conversation.innerHTML = '';
   if (withWelcome) {
     const stamp = document.createElement('div');
@@ -203,10 +253,12 @@ function clearConversation(withWelcome = true) {
 }
 async function sendMessage(text) {
   const value = text.trim(); if (!value || isReplying) return;
+  renderQuickActions(value);
   addMessage(value, 'user'); playMessageSound('sent'); input.value = ''; isReplying = true; input.disabled = true; showTyping();
   const delay = RESPONSE_DELAY.minimum + Math.min(value.length * RESPONSE_DELAY.perCharacter, RESPONSE_DELAY.maximumExtra);
   await new Promise(resolve => setTimeout(resolve, delay));
   document.querySelector('#typing')?.remove(); const response = bot.getResponse(value); playMessageSound('received');
+  renderQuickActions(`${value} ${typeof response === 'string' ? response : response?.text || ''}`);
   if (response?.type === 'clear') clearConversation(false);
   else if (response?.type === 'angry') { setAngryMode(true); addMessage(response.text, 'bot'); }
   else if (response?.type === 'activate-girlfriend') modeButton.click();
@@ -287,7 +339,7 @@ modeButton.addEventListener('click', () => {
     'bot'
   );
 });
-document.querySelectorAll('[data-message]').forEach(button => button.addEventListener('click', () => sendMessage(button.dataset.message)));
+renderQuickActions();
 
 // --- Foto de perfil personalizada ---
 function applyAvatar(dataUrl) {

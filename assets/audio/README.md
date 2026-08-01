@@ -20,4 +20,4 @@ Los efectos al enviar y recibir mensajes se configuran en `MESSAGE_SOUNDS` dentr
 - `efecto_mensaje_mandar.mp3`: se reproduce al enviar un mensaje o adjunto.
 - `efecto_mensaje_recibir.mp3`: se reproduce cuando llega una respuesta de Luisa.
 
-Puedes reemplazar estos archivos conservando el nombre, o cambiar sus rutas en `MESSAGE_SOUNDS`.
+Puedes reemplazar estos archivos conservando el nombre, o cambiar sus rutas en `MESSAGE_SOUNDS`. Ambos archivos se precargan desde el inicio de la página para evitar retrasos al reproducirlos.
