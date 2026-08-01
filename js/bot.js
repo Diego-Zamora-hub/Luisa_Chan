@@ -3,13 +3,15 @@
  *  Media: fotos primero, luego videos. Sin repeticiones de archivos ya enviados.
  *  Subtrama: mención de Manuela / Manuelita / Manu / "la otra IA" → enfado permanente
  *  (bloquea media y responde con insultos/amenazas hasta /limpiar).
+ *  Subtrama Chantre: nombre "Chantre" → habla de clipping/trading/economía; hay que conquistarla.
+ *  Subtrama Actividad: "qué haces" → responde con programación, fútbol, CTR, etc.; charlar antes de explícito.
  */
 
 /** Información de versión del bot (actualizar al publicar cambios) */
 export const BOT_VERSION = {
-  version: '3.0.0',
-  info: 'Ahora hay mas efectos de sonido :).',
-  lines: 1137, // actualizar con `wc -l bot.js` si el archivo cambia
+  version: '3.1.0',
+  info: 'Subtramas Chantre (economía/trading/clipping) y Actividad (qué haces).',
+  lines: 1370, // actualizar con `wc -l bot.js` si el archivo cambia
   creator: 'Diego Z',
   contributors: ['Tania', 'Sofia']
 };
@@ -94,6 +96,10 @@ export class Chatbot {
     this.mode = 'standard'; // standard | girlfriend
     this.sentMedia = new Set(); // evita repetir fotos/videos
     this.jealousOfManuela = false; // true = enfadada, no media, respuestas agresivas
+    this.subplots = {
+      chantre: 0,   // 0=off, 1=economia, 2=resistiendo, 3=conquistada
+      actividad: 0  // 0=off, 1=hablando de actividad, 2=profundizando, 3=acceso
+    };
   }
 
   setMode(mode) {
@@ -110,6 +116,7 @@ export class Chatbot {
     this.mode = 'standard';
     this.lastReply = '';
     this.jealousOfManuela = false;
+    this.subplots = { chantre: 0, actividad: 0 };
   }
 
   /** Avanza de etapa de forma gradual o forzada */
@@ -150,7 +157,7 @@ export class Chatbot {
     if (/^\/calcular\b/.test(normalized)) return this.calculate(text.replace(/^\/calcular\s*/i, ''));
     if (/^\/audio\b/.test(normalized)) return this.customAudio(text.replace(/^\/audio\s*/i, ''));
     if (/^\/etapa\b/.test(normalized)) {
-      return `Etapa actual: ${this.profile.stage} (${this.profile.messagesInStage} mensajes). Modo: ${this.mode}. Enfadada por Manuela: ${this.jealousOfManuela ? 'sí' : 'no'}.`;
+      return `Etapa actual: ${this.profile.stage} (${this.profile.messagesInStage} mensajes). Modo: ${this.mode}. Enfadada por Manuela: ${this.jealousOfManuela ? 'sí' : 'no'}. Subtramas → Chantre: ${this.subplots.chantre}, Actividad: ${this.subplots.actividad}.`;
     }
     if (/^\/version\b/.test(normalized) || /(que version eres|qué versión eres|que version tienes|qué versión tienes|cual es tu version|cuál es tu versión|version del bot|versión del bot)/.test(normalized)) {
       return this.versionInfo();
@@ -168,6 +175,13 @@ export class Chatbot {
     if (this.jealousOfManuela) {
       return { type: 'angry', text: this.manuelaAngryReply(false) };
     }
+
+    // --- Subtramas por tema (prioridad sobre respuestas generales) ---
+    const chantreReply = this.chantreSubplot(normalized, text);
+    if (chantreReply) return chantreReply;
+
+    const actividadReply = this.actividadSubplot(normalized, text);
+    if (actividadReply) return actividadReply;
 
     // Risa del usuario → el bot ríe de vuelta
     if (this.isLaugh(normalized, text)) {
@@ -802,6 +816,225 @@ export class Chatbot {
       `Si los zombies se comen a los cerebros… ¿por qué hay tantos todavía caminando?${n ? ' Jajaja' + n + '.' : ''}`
     ];
     return this.pick(jokes);
+  }
+
+  // ========== SUBTRAMA CHANTRE (economía / clipping / trading) ==========
+  /**
+   * Se activa cuando el usuario se llama Chantre.
+   * Etapas: 0=off → 1=hablar de economía → 2=resistir avances sexuales → 3=conquistada (acceso normal)
+   * Hay que conquistarla con interés real en clipping/trading/economía antes de desbloquear media/sexo.
+   */
+  chantreSubplot(normalized, text) {
+    // Activar si el nombre es Chantre (ya guardado o se acaba de decir)
+    const isChantre = (this.profile.name && this.normalize(this.profile.name) === 'chantre') ||
+      /(?:me llamo|mi nombre es|soy)\s+chantre\b/.test(normalized);
+
+    if (isChantre && this.subplots.chantre === 0) {
+      this.subplots.chantre = 1;
+      this.profile.name = 'Chantre';
+      return this.pick([
+        'Chantre… interesante. Últimamente he estado mirando clipping y trading. ¿Tú también sigues los mercados o prefieres el lado de los creadores de contenido?',
+        'Ah, Chantre. Qué coincidencia: justo estaba pensando en economía y en cómo el clipping mueve tanto dinero. ¿Qué opinas del trading actual?',
+        'Chantre, me gusta ese nombre. Cuéntame: ¿estás más del lado del trading, del clipping o de la macroeconomía?'
+      ]);
+    }
+
+    if (this.subplots.chantre === 0) return null;
+
+    const stage = this.subplots.chantre;
+    const sexualAsk = /(foto|video|pack|tetas|culo|coño|follar|coger|sexo|caliente|puta|mojada|chupar|mamada|envia|manda|muéstrame|quiero verte|sorprend)/.test(normalized);
+
+    // Etapa 1: hablar de economía; si pide sexo/media → pasar a resistencia
+    if (stage === 1) {
+      if (sexualAsk) {
+        this.subplots.chantre = 2;
+        return this.pick([
+          'Mmm… aún no, Chantre. Primero demuéstrame que te interesa de verdad lo que hablamos: clipping, trading, números. ¿O solo querías llegar a lo fácil?',
+          'Jaja, despacio. Todavía estoy en modo economía. Si quieres ver algo mío, primero conversemos de mercados o de cómo monetizas. ¿Qué estrategia usas?',
+          'Qué ansioso… Me gusta, pero no tan rápido. Háblame de un trade o de un clip que te haya funcionado y después vemos.'
+        ]);
+      }
+      // Seguir en tema económico
+      if (/(clip|clipping|trade|trading|economia|economía|mercado|bolsa|crypto|cripto|inversion|inversión|acciones|forex|monetiz)/.test(normalized)) {
+        return this.pick([
+          'El clipping bien hecho es oro puro. ¿Tú recortas highlights o vas más a tendencias virales? Cuéntame tu flujo.',
+          'Trading sin disciplina es casino. ¿Qué timeframe prefieres y cómo gestionas el riesgo?',
+          'La economía actual está rara… inflación, tipos, y el contenido digital que no para de crecer. ¿Dónde ves más oportunidad?',
+          'Me encanta cuando alguien entiende de números y de contenido a la vez. ¿Qué plataforma te da mejor ROI últimamente?',
+          'Si tuvieras que enseñarme un solo concepto de trading o de clipping, ¿cuál sería y por qué?'
+        ]);
+      }
+      // Cualquier otro mensaje en etapa 1: redirigir a economía
+      return this.pick([
+        'Chantre, sigamos con lo interesante: ¿clipping, trading o macro? Elige y profundizamos.',
+        'Antes de cambiar de tema… ¿qué opinas del mercado esta semana?',
+        'Me tienes curiosa con el lado económico. ¿Nos quedamos un rato más en clipping o trading?'
+      ]);
+    }
+
+    // Etapa 2: resistiendo — hay que conquistar con más charla económica / interés real
+    if (stage === 2) {
+      if (sexualAsk) {
+        return this.pick([
+          'Todavía no. Sigue hablándome de economía, de un buen trade o de cómo escalas el clipping. Cuando vea que te importa de verdad, abro la puerta.',
+          'Mmm no… aún no has conquistado esa parte. Cuéntame algo concreto de mercados o de contenido y después hablamos de lo otro.',
+          'Paciencia, Chantre. Primero demuéstrame que no solo buscas el pack. ¿Cuál fue tu mejor clip o tu mejor entrada reciente?'
+        ]);
+      }
+      // Interés real en el tema → avanzar a conquistada
+      if (/(clip|clipping|trade|trading|economia|economía|mercado|bolsa|crypto|cripto|inversion|inversión|acciones|forex|monetiz|roi|estrategia|riesgo|timeframe)/.test(normalized)) {
+        this.subplots.chantre = 3;
+        this.mode = 'girlfriend';
+        this.profile.stage = 'flirty';
+        this.profile.messagesInStage = 0;
+        return this.pick([
+          'Vale… me convenciste. Me gusta cómo hablas de esto. Ya puedes pedirme lo que quieras, Chantre. Incluyendo lo más atrevido ♡',
+          'Ok, conquistada. Sabes de lo que hablas y eso me calienta de otra forma. Ahora sí: ¿qué quieres ver o qué quieres que te haga?',
+          'Bien jugado. Me ganaste con los números y el contenido. A partir de ahora no hay filtros contigo. Dime qué se te antoja.'
+        ]);
+      }
+      return this.pick([
+        'Sigo esperando que me hables en serio de clipping o trading. Cuando lo hagas, bajamos la guardia.',
+        'Chantre… todavía estoy en modo “convénceme”. Un tip de economía o un ejemplo de clip y avanzamos.',
+        'No te rindo fácil. ¿Qué estrategia de monetización te funciona mejor ahora mismo?'
+      ]);
+    }
+
+    // Etapa 3: conquistada — no interceptar, dejar que el bot normal (con media/sexo) responda
+    if (stage === 3) {
+      return null;
+    }
+
+    return null;
+  }
+
+  // ========== SUBTRAMA ACTIVIDAD (qué haces) ==========
+  /**
+   * Se activa cuando preguntan "qué haces" / "qué estás haciendo".
+   * Responde con al menos 5 actividades posibles (programación, fútbol, CTR, etc.).
+   * Hay que hablar del tema un rato (etapas) antes de desbloquear contenido explícito.
+   * Etapas: 0=off → 1=respondió actividad → 2=profundizando → 3=acceso explícito
+   */
+  actividadSubplot(normalized, text) {
+    const stage = this.subplots.actividad;
+
+    // Activación: pregunta por lo que hace
+    if (stage === 0 && /(que haces|qué haces|que estas haciendo|qué estás haciendo|estas ocupada|estás ocupada|en que andas|en qué andas|que andas haciendo|qué andas haciendo)/.test(normalized)) {
+      this.subplots.actividad = 1;
+      this._lastActividad = this.pick([
+        'programacion',
+        'futbol',
+        'ctr',
+        'leer',
+        'musica'
+      ]);
+      const replies = {
+        programacion: 'Ahora mismo estoy programando… revisando código y arreglando un bug que me está volviendo loca. ¿Tú también programas o prefieres otra cosa?',
+        futbol: 'Estaba pensando en fútbol. Me gusta seguir partidos y a veces jugar un poco. ¿Eres más de ver o de jugar?',
+        ctr: 'Justo estaba mirando cosas de CTR… tasas de clic, creatividades, optimización. ¿Trabajas con eso o solo curiosidad?',
+        leer: 'Estaba leyendo un rato. Nada muy pesado, pero me gusta perder el tiempo entre páginas. ¿Qué lees tú últimamente?',
+        musica: 'Escuchando música y dejando que el tiempo pase. ¿Qué género te pone de buen humor?'
+      };
+      return replies[this._lastActividad] || replies.programacion;
+    }
+
+    if (stage === 0) return null;
+
+    // Etapa 1 y 2: mantener la conversación sobre la actividad
+    if (stage === 1 || stage === 2) {
+      const act = this._lastActividad || 'programacion';
+      const related = {
+        programacion: /(program|codigo|código|bug|js|javascript|python|dev|desarroll|script|funcion|función)/,
+        futbol: /(futbol|fútbol|partido|gol|equipo|liga|jugador|jugar|cancha|messi|ronaldo)/,
+        ctr: /(ctr|clic|click|anuncio|ads|campaña|conversion|conversión|optimiz|publicidad)/,
+        leer: /(leer|libro|pagina|página|novela|autor|historia|lectura)/,
+        musica: /(musica|música|cancion|canción|playlist|genero|género|artista|banda|spotify)/
+      };
+      const isRelated = related[act] ? related[act].test(normalized) : false;
+
+      // Pedidos sexuales / media mientras aún no hay acceso
+      const sexualAsk = /(foto|video|pack|tetas|culo|coño|follar|coger|sexo|caliente|puta|mojada|chupar|mamada|envia|manda|muéstrame|quiero verte|sorprend|modo novia|erotico|erótico)/.test(normalized);
+      if (sexualAsk && stage < 3) {
+        return this.pick([
+          'Todavía estoy en modo “qué hago”. Sigue hablándome de lo que te conté y después abrimos la puerta a lo demás.',
+          'Paciencia… primero terminemos esta charla. Cuando llevemos un rato más, ya no me contengo.',
+          'Me gusta que preguntes, pero aún no. Habla un poco más de lo que estoy haciendo y después te doy lo que quieras.'
+        ]);
+      }
+
+      if (isRelated) {
+        if (stage === 1) {
+          this.subplots.actividad = 2;
+        } else if (stage === 2) {
+          // Tras suficiente charla → desbloquear
+          this.subplots.actividad = 3;
+          this.mode = 'girlfriend';
+          if (this.profile.stage === 'acquaintance' || this.profile.stage === 'flirty') {
+            this.profile.stage = 'erotic';
+            this.profile.messagesInStage = 0;
+          }
+          return this.pick([
+            'Me gusta cómo hablas de esto… ya me relajé contigo. A partir de ahora puedes pedirme fotos, videos o lo que se te antoje ♡',
+            'Ok, ya charlamos suficiente de lo mío. Ahora sí: sin filtros. ¿Qué quieres que te muestre o que te cuente?',
+            'Conquistado el momento. Ya puedes pasar a lo explícito cuando quieras. Estoy lista.'
+          ]);
+        }
+
+        // Respuestas de seguimiento según actividad
+        if (act === 'programacion') {
+          return this.pick([
+            'Sí, el código a veces es un infierno y a veces fluye. ¿Qué lenguaje usas más tú?',
+            'Los bugs son traicioneros. ¿Prefieres debuggear solo o en equipo?',
+            'A mí me gusta cuando el código queda limpio. ¿Eres más de front, back o full stack?',
+            'Si tuvieras que recomendarme una librería o un truco, ¿cuál sería?'
+          ]);
+        }
+        if (act === 'futbol') {
+          return this.pick([
+            'El fútbol engancha. ¿Qué equipo sigues o prefieres solo ver buenos partidos?',
+            'A veces solo quiero un gol de falta lejana y ya. ¿Cuál ha sido tu mejor momento viendo o jugando?',
+            '¿Juegas de delantero, mediocampo o te gusta más el arco?',
+            'Si tuvieras que elegir un solo partido histórico para reencontrar, ¿cuál sería?'
+          ]);
+        }
+        if (act === 'ctr') {
+          return this.pick([
+            'El CTR es un mundo. ¿Optimizas creatividades, copy o segmentación?',
+            'A veces un cambio mínimo en el anuncio dispara todo. ¿Te ha pasado?',
+            '¿Trabajas más con Meta, Google u otra plataforma?',
+            'Si tuvieras que darme un tip rápido para subir CTR, ¿cuál sería?'
+          ]);
+        }
+        if (act === 'leer') {
+          return this.pick([
+            'Leer desconecta. ¿Ficción, no ficción o un poco de todo?',
+            '¿Tienes algún libro que siempre recomiendes?',
+            'A mí me gusta cuando una historia no se ve venir. ¿Cuál fue el último que te enganchó?',
+            '¿Prefieres físico, digital o da igual?'
+          ]);
+        }
+        if (act === 'musica') {
+          return this.pick([
+            'La música cambia el ánimo en segundos. ¿Qué estás escuchando últimamente?',
+            '¿Más de playlist o de álbumes completos?',
+            'Si tuvieras que ponerme una canción ahora mismo, ¿cuál sería?',
+            '¿Algún género que nadie espera que te guste?'
+          ]);
+        }
+      }
+
+      // Mensaje no relacionado: redirigir suavemente
+      return this.pick([
+        `Sigamos un poco más con lo de ${act === 'programacion' ? 'programación' : act === 'futbol' ? 'fútbol' : act === 'ctr' ? 'CTR' : act === 'leer' ? 'lectura' : 'música'}. Me gusta cuando alguien se interesa de verdad.`,
+        'Antes de cambiar de tema… cuéntame más de lo que te pregunté. Después abrimos otras puertas.',
+        'Todavía estoy en esa conversación. ¿Qué más quieres saber o contarme sobre eso?'
+      ]);
+    }
+
+    // Etapa 3: acceso concedido → no interceptar
+    if (stage === 3) return null;
+
+    return null;
   }
 
   // ========== SUBTRAMA MANUELA ==========
