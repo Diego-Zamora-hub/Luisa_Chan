@@ -86,16 +86,16 @@ const PACK_IMAGES = [
 // Fotos genéricas (no específicas de parte del cuerpo). Añade más entradas
 // cuando coloques archivos en assets/random/ (foto1, foto2, … fotoN).
 const RANDOM_IMAGES = [
-  'assets/random/foto1.jpeg',
-  'assets/random/foto2.jpeg',
-  'assets/random/foto3.jpeg',
-  'assets/random/foto4.jpeg',
-  'assets/random/foto5.jpeg',
-  'assets/random/foto6.jpeg',
-  'assets/random/foto7.jpeg',
-  'assets/random/foto8.jpeg',
-  'assets/random/foto9.jpeg',
-  'assets/random/foto10.jpeg'
+  'assets/random/foto1.jpg',
+  'assets/random/foto2.jpg',
+  'assets/random/foto3.jpg',
+  'assets/random/foto4.jpg',
+  'assets/random/foto5.jpg',
+  'assets/random/foto6.jpg',
+  'assets/random/foto7.jpg',
+  'assets/random/foto8.jpg',
+  'assets/random/foto9.jpg',
+  'assets/random/foto10.jpg'
 ];
 
 export class Chatbot {
