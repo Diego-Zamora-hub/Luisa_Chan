@@ -1,4 +1,6 @@
-# Chantreapp
+![image alt](https://github.com/Diego-Zamora-hub/Luisa_Chan/blob/f1822878173b0d7cfdba4be9ac87f772aaa1440b/assets/iconos/Photoroom-20260801_073454957.png)
+
+# Luisa Chan
 
 Chatbot web interactivo inspirado en WhatsApp Web, construido con HTML, CSS y JavaScript modular. No requiere servidor ni instalación de dependencias.
 
