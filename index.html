@@ -35,7 +35,7 @@
           <span><b>♡</b> Tu espacio privado</span>
         </div>
       </div>
-      <p class="intro-footer">LUISA / CHAT LOCAL <span>•</span> V 2.0.9</p>
+      <p class="intro-footer">LUISA / CHAT LOCAL <span>•</span> V 3.0.0</p>
     </section>
     <main class="app-shell">
       <section class="chat-card" aria-label="Chat de Luisa Chan">
@@ -93,34 +93,32 @@
         </div>
 
         <form class="composer" id="chatForm" autocomplete="off" novalidate data-form-type="other">
-          <input class="sr-only" id="imageInput" type="file" accept="image/*" />
-          <input class="sr-only" id="audioInput" type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.webm" />
-          <button class="composer-icon" id="attachButton" type="button" title="Enviar imagen" aria-label="Enviar imagen">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.4 11.6-8.8 8.8a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>
-          </button>
-          <button class="composer-icon" id="audioAttachButton" type="button" title="Adjuntar audio" aria-label="Adjuntar audio">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>
-          </button>
+          <input class="sr-only" id="attachmentInput" type="file" accept="image/*,audio/*,.mp3,.m4a,.wav,.ogg,.webm" />
           <button class="composer-icon" id="emojiButton" type="button" title="Elegir emoji" aria-label="Elegir emoji">☺</button>
-          <label class="sr-only" for="messageInput">Escribe un mensaje</label>
-          <input
-            id="messageInput"
-            type="text"
-            name="message"
-            placeholder="Escribe un mensaje"
-            maxlength="500"
-            autocomplete="off"
-            autocorrect="off"
-            autocapitalize="none"
-            spellcheck="false"
-            inputmode="text"
-            enterkeyhint="send"
-            aria-autocomplete="none"
-            data-lpignore="true"
-            data-1p-ignore
-            data-bwignore
-            data-form-type="other"
-          />
+          <div class="message-field">
+            <label class="sr-only" for="messageInput">Escribe un mensaje</label>
+            <input
+              id="messageInput"
+              type="text"
+              name="message"
+              placeholder="Escribe un mensaje"
+              maxlength="500"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="none"
+              spellcheck="false"
+              inputmode="text"
+              enterkeyhint="send"
+              aria-autocomplete="none"
+              data-lpignore="true"
+              data-1p-ignore
+              data-bwignore
+              data-form-type="other"
+            />
+            <button class="composer-icon attach-in-field" id="attachButton" type="button" title="Adjuntar imagen o audio" aria-label="Adjuntar imagen o audio">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.4 11.6-8.8 8.8a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>
+            </button>
+          </div>
           <button class="send-button" type="submit" aria-label="Enviar mensaje">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 3-7.4 18-3.9-7.1L3 10.4 21 3Zm-11.2 10.9L21 3"/></svg>
           </button>

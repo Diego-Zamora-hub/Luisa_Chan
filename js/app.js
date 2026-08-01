@@ -9,10 +9,8 @@ const input = document.querySelector('#messageInput');
 const clearButton = document.querySelector('#clearButton');
 const modeButton = document.querySelector('#modeButton');
 const pageIcon = document.querySelector('#pageIcon');
-const imageInput = document.querySelector('#imageInput');
+const attachmentInput = document.querySelector('#attachmentInput');
 const attachButton = document.querySelector('#attachButton');
-const audioInput = document.querySelector('#audioInput');
-const audioAttachButton = document.querySelector('#audioAttachButton');
 const recordButton = document.querySelector('#recordButton');
 const emojiButton = document.querySelector('#emojiButton');
 const emojiPicker = document.querySelector('#emojiPicker');
@@ -40,6 +38,11 @@ const MODE_SOUNDS = {
   girlfriendOn: 'assets/audio/audio_modo_novia_on.m4a',
   girlfriendOff: 'assets/audio/audio_modo_novia_off.mp3'
 };
+// Reemplaza estas rutas por tus propios archivos para personalizar los sonidos del chat.
+const MESSAGE_SOUNDS = {
+  sent: 'assets/audio/efecto_mensaje_mandar.mp3',
+  received: 'assets/audio/efecto_mensaje_recibir.mp3'
+};
 const PLAY_ICON_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7Z"/></svg>';
 const PAUSE_ICON_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>';
 const STOP_ICON_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1"/></svg>';
@@ -56,6 +59,11 @@ function playModeSound(enabled) {
   const sound = new Audio(enabled ? MODE_SOUNDS.girlfriendOn : MODE_SOUNDS.girlfriendOff);
   sound.preload = 'auto';
   sound.play().catch(() => { /* El archivo puede no haberse configurado. */ });
+}
+function playMessageSound(type) {
+  const sound = new Audio(MESSAGE_SOUNDS[type]);
+  sound.preload = 'auto';
+  sound.play().catch(() => { /* El archivo puede no haberse configurado o el navegador bloqueó el audio. */ });
 }
 function setAngryMode(enabled) {
   isAngry = enabled;
@@ -195,10 +203,10 @@ function clearConversation(withWelcome = true) {
 }
 async function sendMessage(text) {
   const value = text.trim(); if (!value || isReplying) return;
-  addMessage(value, 'user'); input.value = ''; isReplying = true; input.disabled = true; showTyping();
+  addMessage(value, 'user'); playMessageSound('sent'); input.value = ''; isReplying = true; input.disabled = true; showTyping();
   const delay = RESPONSE_DELAY.minimum + Math.min(value.length * RESPONSE_DELAY.perCharacter, RESPONSE_DELAY.maximumExtra);
   await new Promise(resolve => setTimeout(resolve, delay));
-  document.querySelector('#typing')?.remove(); const response = bot.getResponse(value);
+  document.querySelector('#typing')?.remove(); const response = bot.getResponse(value); playMessageSound('received');
   if (response?.type === 'clear') clearConversation(false);
   else if (response?.type === 'angry') { setAngryMode(true); addMessage(response.text, 'bot'); }
   else if (response?.type === 'activate-girlfriend') modeButton.click();
@@ -211,14 +219,16 @@ async function sendMessage(text) {
 }
 form.addEventListener('submit', event => { event.preventDefault(); sendMessage(input.value); });
 clearButton.addEventListener('click', () => { bot.reset(); clearConversation(); });
-attachButton.addEventListener('click', () => imageInput.click());
-imageInput.addEventListener('change', () => { const file = imageInput.files?.[0]; if (!file) return; addImageMessage(URL.createObjectURL(file), 'user', file.name); imageInput.value = ''; });
-audioAttachButton.addEventListener('click', () => audioInput.click());
-audioInput.addEventListener('change', () => {
-  const file = audioInput.files?.[0]; if (!file) return;
-  addAudioMessage({ src: URL.createObjectURL(file), caption: file.name }, 'user');
-  audioInput.value = '';
-  setTimeout(() => addMessage('Recibí tu audio. Para dictar texto directamente en el mensaje, usa el botón del micrófono.', 'bot'), 350);
+attachButton.addEventListener('click', () => attachmentInput.click());
+attachmentInput.addEventListener('change', () => {
+  const file = attachmentInput.files?.[0]; if (!file) return;
+  if (file.type.startsWith('image/')) addImageMessage(URL.createObjectURL(file), 'user', file.name);
+  else if (file.type.startsWith('audio/') || /\.(mp3|m4a|wav|ogg|webm)$/i.test(file.name)) {
+    addAudioMessage({ src: URL.createObjectURL(file), caption: file.name }, 'user');
+    setTimeout(() => { playMessageSound('received'); addMessage('Recibí tu audio. Para dictar texto directamente en el mensaje, usa el botón del micrófono.', 'bot'); }, 350);
+  }
+  attachmentInput.value = '';
+  playMessageSound('sent');
 });
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null; let isDictating = false;
