@@ -1,6 +1,7 @@
 /** Motor local de Luisa Chan: conversación, comandos, cálculos y progresión erótica.
  *  Etapas: acquaintance → flirty → erotic → explicit
  *  Media: fotos primero, luego videos. Sin repeticiones de archivos ya enviados.
+ *  Si se agota todo → pool assets/random/; si también se agota → ofrece reenvío (sí/no).
  *  Subtrama: mención de Manuela / Manuelita / Manu / "la otra IA" → enfado permanente
  *  (bloquea media y responde con insultos/amenazas hasta /limpiar).
  *  Subtrama Chantre: nombre "Chantre" → habla de clipping/trading/economía; hay que conquistarla.
@@ -9,9 +10,9 @@
 
 /** Información de versión del bot (actualizar al publicar cambios) */
 export const BOT_VERSION = {
-  version: '3.1.0',
-  info: 'Subtramas Chantre (economía/trading/clipping) y Actividad (qué haces).',
-  lines: 1370, // actualizar con `wc -l bot.js` si el archivo cambia
+  version: '3.2.0',
+  info: 'Pool random (assets/random) + oferta de reenvío cuando se agota el contenido nuevo.',
+  lines: 1483, // actualizar con `wc -l bot.js` si el archivo cambia
   creator: 'Diego Z',
   contributors: ['Tania', 'Sofia']
 };
@@ -82,6 +83,21 @@ const PACK_IMAGES = [
   'assets/pack/foto5.jpeg'
 ];
 
+// Fotos genéricas (no específicas de parte del cuerpo). Añade más entradas
+// cuando coloques archivos en assets/random/ (foto1, foto2, … fotoN).
+const RANDOM_IMAGES = [
+  'assets/random/foto1.jpeg',
+  'assets/random/foto2.jpeg',
+  'assets/random/foto3.jpeg',
+  'assets/random/foto4.jpeg',
+  'assets/random/foto5.jpeg',
+  'assets/random/foto6.jpeg',
+  'assets/random/foto7.jpeg',
+  'assets/random/foto8.jpeg',
+  'assets/random/foto9.jpeg',
+  'assets/random/foto10.jpeg'
+];
+
 export class Chatbot {
   constructor() {
     this.profile = {
@@ -96,6 +112,7 @@ export class Chatbot {
     this.mode = 'standard'; // standard | girlfriend
     this.sentMedia = new Set(); // evita repetir fotos/videos
     this.jealousOfManuela = false; // true = enfadada, no media, respuestas agresivas
+    this.awaitingResendConfirm = false; // true = esperando sí/no para reenviar media ya vista
     this.subplots = {
       chantre: 0,   // 0=off, 1=economia, 2=resistiendo, 3=conquistada
       actividad: 0  // 0=off, 1=hablando de actividad, 2=profundizando, 3=acceso
@@ -116,6 +133,7 @@ export class Chatbot {
     this.mode = 'standard';
     this.lastReply = '';
     this.jealousOfManuela = false;
+    this.awaitingResendConfirm = false;
     this.subplots = { chantre: 0, actividad: 0 };
   }
 
@@ -174,6 +192,23 @@ export class Chatbot {
     // Si ya está enfadada → solo respuestas agresivas, sin media ni modo novia
     if (this.jealousOfManuela) {
       return { type: 'angry', text: this.manuelaAngryReply(false) };
+    }
+
+    // Confirmación de reenvío de media ya vista (no altera el Set anti-repetición)
+    if (this.awaitingResendConfirm) {
+      if (/\b(si|sí|ok|dale|reenvia|reenvía|manda|envia|envía|claro|por favor|porfa|yes)\b/.test(normalized)) {
+        this.awaitingResendConfirm = false;
+        return this.resendPreviousMedia();
+      }
+      if (/\b(no|nah|nel|paso|cancel|despues|después|luego)\b/.test(normalized)) {
+        this.awaitingResendConfirm = false;
+        return this.pick([
+          'De acuerdo, no reenvío nada. Cuando quieras más contenido nuevo o que te hable sucio, dímelo.',
+          'Ok, sin reenvíos. ¿Prefieres que te describa algo o seguimos charlando?'
+        ]);
+      }
+      // Respuesta ambigua: recordar la pregunta
+      return '¿Quieres que te reenvíe algo de lo que ya te mandé? Responde sí o no.';
     }
 
     // --- Subtramas por tema (prioridad sobre respuestas generales) ---
@@ -1090,6 +1125,59 @@ export class Chatbot {
     };
   }
 
+  /** Envía una foto aleatoria del pool assets/random/ que aún no se haya mandado. */
+  trySendRandomPhoto(mark) {
+    const pool = RANDOM_IMAGES.filter(p => !this.sentMedia.has(p));
+    if (pool.length === 0) return null;
+    const path = pool[Math.floor(Math.random() * pool.length)];
+    mark(path);
+    return {
+      text: this.pick([
+        'Toma otra foto… esta es del montón random, pero igual es para ti ♡',
+        'Aquí va una foto extra. No es de las “especiales”, pero me gusta mandártela.',
+        'Más contenido para ti. Disfruta esta foto random.'
+      ]),
+      image: path,
+      caption: path.split('/').pop()
+    };
+  }
+
+  /** Ofrece reenviar media ya vista; no borra sentMedia (anti-repetición sigue activa). */
+  offerResend() {
+    if (this.sentMedia.size === 0) {
+      return this.pick([
+        'Todavía no te he mandado nada que pueda reenviar. Pide una foto o un video primero.',
+        'No hay nada previo para reenviar. Pídeme contenido nuevo cuando quieras.'
+      ]);
+    }
+    this.awaitingResendConfirm = true;
+    return this.pick([
+      'Ya te mandé todo lo nuevo que tenía (incluyendo el pool random). ¿Quieres que te reenvíe algo de lo que ya viste? Responde sí o no.',
+      'Se me acabaron los archivos nuevos. ¿Te reenvío uno de los que ya te mandé? Di sí o no.',
+      'No me quedan fotos/videos sin enviar. ¿Quieres que repita alguno de los anteriores? Contesta sí o no.'
+    ]);
+  }
+
+  /** Reenvía un archivo aleatorio de los ya enviados (sin quitarlo del Set). */
+  resendPreviousMedia() {
+    const list = Array.from(this.sentMedia);
+    if (list.length === 0) {
+      return 'No tengo nada previo para reenviar. Pídeme contenido nuevo.';
+    }
+    const path = list[Math.floor(Math.random() * list.length)];
+    const name = path.split('/').pop();
+    const isVideo = /\.(mp4|webm|mov)$/i.test(path);
+    const text = this.pick([
+      `Te reenvío esto: ${name}. Ya lo habías visto, pero aquí está de nuevo ♡`,
+      `Como pediste… te mando otra vez ${name}.`,
+      `Reenvío listo: ${name}. ¿Quieres otro o seguimos con palabras?`
+    ]);
+    if (isVideo) {
+      return { text, video: path, caption: name };
+    }
+    return { text, image: path, caption: name };
+  }
+
   trySendMedia(normalized) {
     // Bloqueo total de media si está enfadada por Manuela
     if (this.jealousOfManuela) return null;
@@ -1137,11 +1225,11 @@ export class Chatbot {
         mark(chosen.path);
         return { text: chosen.text, video: chosen.path, caption: chosen.caption };
       }
-      // Todo enviado → mensaje sin media
-      return this.pick([
-        'Ya te mandé casi todo lo que tengo… pero puedo seguir describiéndote lo que te haría con palabras. ¿Qué quieres que te cuente?',
-        'Se me acabaron los archivos nuevos por ahora. ¿Quieres que te hable bien sucio mientras te imaginas el resto?'
-      ]);
+      // Específicos agotados → pool random
+      const randomPhoto = this.trySendRandomPhoto(mark);
+      if (randomPhoto) return randomPhoto;
+      // Todo agotado → ofrecer reenvío
+      return this.offerResend();
     }
 
     // Partes del cuerpo (prioridad video si disponible)
@@ -1158,7 +1246,12 @@ export class Chatbot {
         mark('assets/foto_romantica.jpg');
         return { text: 'No me queda el video de tetas, pero toma esta foto y imagíname chupándotelas…', image: 'assets/foto_romantica.jpg', caption: 'foto_romantica.jpg' };
       }
-      return 'Ya te mostré mis tetas. ¿Quieres que te describa cómo se sienten en tu boca o prefieres otra parte?';
+      const randomPhoto = this.trySendRandomPhoto(mark);
+      if (randomPhoto) {
+        randomPhoto.text = 'Ya no me queda el video de tetas. Te mando otra foto mientras tanto…';
+        return randomPhoto;
+      }
+      return this.offerResend();
     }
 
     if (/(culo|trasero|nalgas|ass|pompis)/.test(normalized)) {
@@ -1174,10 +1267,15 @@ export class Chatbot {
         mark('assets/foto_romantica.jpg');
         return { text: 'Toma esta foto y piensa en mi culo mientras me follas.', image: 'assets/foto_romantica.jpg', caption: 'foto_romantica.jpg' };
       }
-      return 'Ya viste mi culo. ¿Quieres que te cuente cómo se siente cuando me la metes por ahí?';
+      const randomPhoto = this.trySendRandomPhoto(mark);
+      if (randomPhoto) {
+        randomPhoto.text = 'Ya viste el video del culo. Aquí va otra foto mientras tanto…';
+        return randomPhoto;
+      }
+      return this.offerResend();
     }
 
-    if (/(vagina|coño|chocho|pussy|panocha|concha)/.test(normalized)) {
+    if (/(vagina|coño|chocho|pussy|panocha|concha|cuca|chucha|chochita|cuquita|conchita|florecita|chocha)/.test(normalized)) {
       if (available('assets/vagina.mp4')) {
         mark('assets/vagina.mp4');
         return {
@@ -1186,7 +1284,12 @@ export class Chatbot {
           caption: 'vagina.mp4'
         };
       }
-      return 'Ya te mostré mi coño. ¿Quieres que te describa cómo late cuando pienso en tu polla?';
+      const randomPhoto = this.trySendRandomPhoto(mark);
+      if (randomPhoto) {
+        randomPhoto.text = 'Ya te mostré ese video. Toma otra foto mientras tanto…';
+        return randomPhoto;
+      }
+      return this.offerResend();
     }
 
     if (/(lengua|chupar|mamada|oral|boca)/.test(normalized) && !/(chupame|chúpame|mamame|mámame)/.test(normalized)) {
@@ -1198,10 +1301,15 @@ export class Chatbot {
           caption: 'lengua.mp4'
         };
       }
-      return 'Ya viste mi lengua. ¿Quieres que te cuente exactamente cómo te la chuparía hasta dejarte seco?';
+      const randomPhoto = this.trySendRandomPhoto(mark);
+      if (randomPhoto) {
+        randomPhoto.text = 'Ya viste el video de la lengua. Aquí va otra foto…';
+        return randomPhoto;
+      }
+      return this.offerResend();
     }
 
-    // Fotos específicas
+    // Fotos específicas (luego random, luego reenvío)
     if (/(manda(me)? (una )?foto|envía(me)? (una )?foto|muéstrame (una )?foto|quiero (una )?foto|fotos|mandame fotos)/.test(normalized)) {
       const photoPool = [
         { path: 'assets/foto_romantica.jpg', text: 'Una foto bien putita solo para ti ♡', caption: 'foto_romantica.jpg' },
@@ -1209,15 +1317,14 @@ export class Chatbot {
         { path: 'assets/foto_feliz.jpg', text: 'Una foto alegre… aunque yo esté pensando en cosas sucias.', caption: 'foto_feliz.jpg' }
       ].filter(o => available(o.path));
 
-      if (photoPool.length === 0) {
-        return this.pick([
-          'Ya te mandé todas las fotos que tengo. ¿Quieres un video o prefieres que te hable sucio?',
-          'No me quedan fotos nuevas. Puedo mandarte un video si todavía hay, o describirte lo que te haría.'
-        ]);
+      if (photoPool.length > 0) {
+        const chosen = photoPool[Math.floor(Math.random() * photoPool.length)];
+        mark(chosen.path);
+        return { text: chosen.text, image: chosen.path, caption: chosen.caption };
       }
-      const chosen = photoPool[Math.floor(Math.random() * photoPool.length)];
-      mark(chosen.path);
-      return { text: chosen.text, image: chosen.path, caption: chosen.caption };
+      const randomPhoto = this.trySendRandomPhoto(mark);
+      if (randomPhoto) return randomPhoto;
+      return this.offerResend();
     }
 
     // Videos específicos
@@ -1233,15 +1340,18 @@ export class Chatbot {
         { path: 'assets/lengua.mp4', text: 'Mira mi lengua y imagina el resto.', caption: 'lengua.mp4' }
       ].filter(o => available(o.path));
 
-      if (videoPool.length === 0) {
-        return this.pick([
-          'Ya te mandé todos los videos. ¿Quieres que te describa una escena bien sucia mientras te tocas?',
-          'No me quedan videos nuevos. Pero puedo seguirte el ritmo con palabras todo lo explícito que quieras.'
-        ]);
+      if (videoPool.length > 0) {
+        const chosen = videoPool[Math.floor(Math.random() * videoPool.length)];
+        mark(chosen.path);
+        return { text: chosen.text, video: chosen.path, caption: chosen.caption };
       }
-      const chosen = videoPool[Math.floor(Math.random() * videoPool.length)];
-      mark(chosen.path);
-      return { text: chosen.text, video: chosen.path, caption: chosen.caption };
+      // Sin videos nuevos → foto random o reenvío
+      const randomPhoto = this.trySendRandomPhoto(mark);
+      if (randomPhoto) {
+        randomPhoto.text = 'No me quedan videos nuevos. Te mando una foto del pool random mientras tanto…';
+        return randomPhoto;
+      }
+      return this.offerResend();
     }
 
     return null;
@@ -1286,11 +1396,13 @@ Progresión natural:
 3. Erótico (ya se pueden pedir fotos/videos)
 4. Explícito (dirty talk completo)
 
-Media (sin repeticiones):
+Media (sin repeticiones de archivos nuevos):
 • “muéstrame algo”, “quiero tu pack”, “sorprendeme”
 • “manda foto” / “manda video”
 • “manda un audio de saludo / ánimo / buenas noches / risa / te extraño / caliente / chiste”
-• mencionar tetas, culo, vagina, lengua
+• mencionar tetas, culo, vagina (cuca, panocha, chucha, chochita, cuquita, conchita, florecita, chocha…), lengua
+• Si se agotan los específicos → usa fotos de assets/random/
+• Si también se agota random → pregunta si quieres que reenvíe algo ya visto (sí/no). El anti-repetición sigue activo para contenido nuevo.
 
 Extras:
 • Si te ríes (jaja, 😂…), yo también río
@@ -1304,7 +1416,8 @@ bloqueo fotos/videos y respondo de forma agresiva hasta que uses /limpiar.
 Archivos disponibles en assets:
 culo.mp4, tetas.mp4, vagina.mp4, lengua.mp4,
 video_especial.mp4, video_romantico.mp4, video_feliz.mp4, video_normal.mp4, video_paisaje.mp4,
-foto_romantica.jpg, foto_normal.jpg, foto_feliz.jpg, foto_perfil_predeterminada.jpeg`;
+foto_romantica.jpg, foto_normal.jpg, foto_feliz.jpg, foto_perfil_predeterminada.jpeg,
+random/foto1.jpeg … foto10.jpeg (añade más en RANDOM_IMAGES del código)`;
   }
 
   time() {
