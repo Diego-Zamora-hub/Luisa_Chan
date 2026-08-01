@@ -7,8 +7,8 @@
 
 /** Información de versión del bot (actualizar al publicar cambios) */
 export const BOT_VERSION = {
-  version: '2.0.5',
-  info: 'Actualización de interfaz, ahora responde a su tiempo, incluyen informacion del sistema, cantidad de lineas implementadas.',
+  version: '2.0.9',
+  info: 'Se han agregado una nueva interfaz, ahora hay efectos de sonido :0.',
   lines: 1137, // actualizar con `wc -l bot.js` si el archivo cambia
   creator: 'Diego Z',
   contributors: ['Tania', 'Sofia']

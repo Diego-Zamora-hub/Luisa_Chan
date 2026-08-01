@@ -35,6 +35,14 @@ const DOUBLE_TICK_SVG = '<svg viewBox="0 0 18 12" aria-hidden="true"><path d="M1
 // Espera visible antes de cada respuesta: 0,9 s como minimo y hasta 1,8 s.
 const RESPONSE_DELAY = { minimum: 900, perCharacter: 14, maximumExtra: 900 };
 const PAGE_ICONS = { standard: 'assets/iconos/Luisa_icon_1.ico', girlfriend: 'assets/iconos/Luisa_icon_2.ico' };
+// Personaliza estas dos rutas con los sonidos que prefieras.
+const MODE_SOUNDS = {
+  girlfriendOn: 'assets/audio/audio_modo_novia_on.m4a',
+  girlfriendOff: 'assets/audio/audio_modo_novia_off.mp3'
+};
+const PLAY_ICON_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7Z"/></svg>';
+const PAUSE_ICON_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>';
+const STOP_ICON_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1"/></svg>';
 
 introStart.addEventListener('click', () => {
   introScreen.classList.add('is-leaving');
@@ -44,6 +52,11 @@ introStart.addEventListener('click', () => {
 function now() { return new Intl.DateTimeFormat('es-CO', { hour: '2-digit', minute: '2-digit' }).format(new Date()); }
 function scrollToEnd() { conversation.scrollTop = conversation.scrollHeight; }
 function updatePageIcon(isGirlfriend) { pageIcon.href = isGirlfriend ? PAGE_ICONS.girlfriend : PAGE_ICONS.standard; }
+function playModeSound(enabled) {
+  const sound = new Audio(enabled ? MODE_SOUNDS.girlfriendOn : MODE_SOUNDS.girlfriendOff);
+  sound.preload = 'auto';
+  sound.play().catch(() => { /* El archivo puede no haberse configurado. */ });
+}
 function setAngryMode(enabled) {
   isAngry = enabled;
   document.body.classList.toggle('angry-mode', enabled);
@@ -100,7 +113,7 @@ function addVideoMessage(src, sender, caption = '') {
   appendTime(bubble, sender);
   row.append(bubble); conversation.append(row); scrollToEnd();
 }
-function addAudioMessage({ src = '', speech = '', caption = '' }, sender) {
+function addNativeAudioMessage({ src = '', speech = '', caption = '' }, sender) {
   const row = document.createElement('div'); row.className = `message-row ${sender}`;
   const bubble = document.createElement('div'); bubble.className = 'bubble audio-bubble';
   const player = document.createElement('audio'); player.controls = true; player.preload = 'metadata';
@@ -114,6 +127,51 @@ function addAudioMessage({ src = '', speech = '', caption = '' }, sender) {
     player.src = src;
     player.addEventListener('error', () => { player.remove(); addSpeechControl(); }, { once: true });
     bubble.append(player);
+  } else addSpeechControl();
+  bubble.append(label); appendTime(bubble, sender); row.append(bubble); conversation.append(row); scrollToEnd();
+}
+function addAudioMessage({ src = '', speech = '', caption = '' }, sender) {
+  const row = document.createElement('div'); row.className = `message-row ${sender}`;
+  const bubble = document.createElement('div'); bubble.className = 'bubble audio-bubble';
+  const label = document.createElement('span'); label.className = 'audio-label'; label.textContent = caption || 'Mensaje de voz';
+  const addSpeechControl = () => {
+    if (!speech || bubble.querySelector('.speech-play')) return;
+    const play = document.createElement('button'); play.type = 'button'; play.className = 'speech-play'; play.textContent = 'Escuchar voz';
+    play.addEventListener('click', () => speakText(speech)); bubble.prepend(play);
+  };
+  if (src) {
+    const player = document.createElement('audio'); player.preload = 'metadata'; player.src = src;
+    const controls = document.createElement('div'); controls.className = 'voice-player';
+    const profile = document.createElement('div'); profile.className = 'voice-profile';
+    if (sender === 'bot') {
+      const image = document.createElement('img'); image.src = avatarImage.currentSrc || avatarImage.src || DEFAULT_AVATAR; image.alt = 'Foto de perfil de Luisa';
+      image.addEventListener('error', () => { profile.textContent = 'L'; }, { once: true }); profile.append(image);
+    } else profile.textContent = 'Tu';
+    const microphone = document.createElement('span'); microphone.className = 'voice-mic'; microphone.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="8" height="13" rx="4"/><path d="M5 12a7 7 0 0 0 14 0M12 19v3m-3 0h6"/></svg>'; profile.append(microphone);
+    const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'voice-control'; toggle.setAttribute('aria-label', 'Reproducir audio'); toggle.innerHTML = PLAY_ICON_SVG;
+    const waveform = document.createElement('div'); waveform.className = 'voice-waveform';
+    const barHeights = [12, 20, 8, 14, 26, 17, 32, 11, 19, 24, 13, 28, 8, 18, 36, 22, 12, 26, 9, 31, 15, 20, 29, 11, 24, 17, 33, 13, 21, 9, 27, 16, 23, 12];
+    const bars = barHeights.map(height => { const bar = document.createElement('i'); bar.style.height = `${height}px`; waveform.append(bar); return bar; });
+    const track = document.createElement('input'); track.className = 'voice-progress'; track.type = 'range'; track.min = '0'; track.max = '100'; track.value = '0'; track.step = '0.1'; track.setAttribute('aria-label', 'Progreso del audio'); waveform.append(track);
+    const meta = document.createElement('div'); meta.className = 'voice-meta';
+    const duration = document.createElement('span'); duration.className = 'voice-duration'; duration.textContent = '0:00';
+    const sentAt = document.createElement('span'); sentAt.className = 'voice-sent-at'; sentAt.textContent = now(); meta.append(duration, sentAt);
+    const formatTime = seconds => {
+      if (!Number.isFinite(seconds)) return '0:00';
+      const minutes = Math.floor(seconds / 60); const remaining = Math.floor(seconds % 60).toString().padStart(2, '0');
+      return `${minutes}:${remaining}`;
+    };
+    const sync = () => { const ratio = player.duration ? (player.currentTime / player.duration) * 100 : 0; track.value = String(ratio); duration.textContent = formatTime(player.currentTime || player.duration); bars.forEach((bar, index) => bar.classList.toggle('is-played', index < bars.length * ratio / 100)); };
+    const reset = () => { player.pause(); player.currentTime = 0; sync(); toggle.innerHTML = PLAY_ICON_SVG; toggle.setAttribute('aria-label', 'Reproducir audio'); };
+    toggle.addEventListener('click', () => { if (player.paused) player.play().catch(() => {}); else player.pause(); });
+    track.addEventListener('input', () => { if (player.duration) player.currentTime = (Number(track.value) / 100) * player.duration; });
+    player.addEventListener('loadedmetadata', () => { duration.textContent = formatTime(player.duration); });
+    player.addEventListener('timeupdate', sync);
+    player.addEventListener('play', () => { toggle.innerHTML = PAUSE_ICON_SVG; toggle.setAttribute('aria-label', 'Pausar audio'); });
+    player.addEventListener('pause', () => { if (!player.ended) { toggle.innerHTML = PLAY_ICON_SVG; toggle.setAttribute('aria-label', 'Reproducir audio'); } });
+    player.addEventListener('ended', reset);
+    player.addEventListener('error', () => { controls.remove(); player.remove(); addSpeechControl(); }, { once: true });
+    controls.append(toggle, waveform, meta, profile); bubble.append(player, controls);
   } else addSpeechControl();
   bubble.append(label); appendTime(bubble, sender); row.append(bubble); conversation.append(row); scrollToEnd();
 }
@@ -211,6 +269,7 @@ modeButton.addEventListener('click', () => {
   modeButton.innerHTML = enabled ? '<span aria-hidden="true">♥</span> Modo Novia' : '<span aria-hidden="true">♡</span> Modo Novia';
   modeButton.title = enabled ? 'Desactivar modo Novia' : 'Activar modo Novia';
   bot.setMode(enabled ? 'girlfriend' : 'standard');
+  playModeSound(enabled);
   addMessage(
     enabled
       ? 'Modo Novia activado ♡ Ahora puedo hablarte sin filtros: más sucia, más explícita y lista para lo que se te antoje. Dime qué quieres hacer conmigo...'

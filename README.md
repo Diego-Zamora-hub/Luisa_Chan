@@ -21,6 +21,12 @@ Abre `index.html` en cualquier navegador moderno. Para desarrollo local también
 
 ## Audios del bot
 
+### Sonidos del modo Novia
+
+El cambio de modo reproduce un sonido al activar y otro al volver al modo normal. Coloca tus archivos en `assets/audio/` y ajusta las rutas `girlfriendOn` y `girlfriendOff` de `MODE_SOUNDS` en `js/app.js`. Por defecto usa los archivos ya incluidos `saludo.mp3` y `animo.mp3`.
+
+Los mensajes de voz usan un reproductor similar al de WhatsApp, con avatar, reproducción/pausa, detener, barra de progreso y duración.
+
 Hay dos formas de hacer que el bot envíe un audio:
 
 - Escribe `/audio Tu texto aquí` para que use la síntesis de voz del navegador. No requiere archivos.
